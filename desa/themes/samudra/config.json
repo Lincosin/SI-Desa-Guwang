@@ -1,0 +1,160 @@
+[
+    {
+        "judul": "Warna Utama",
+        "key": "warna_utama",
+        "value": "#1d64d8",
+        "type": "color-picker",
+        "keterangan": "Warna biru utama tema. Warna turunan (lebih gelap/terang) dihitung otomatis.",
+        "options": null,
+        "readonly": false,
+        "group": "Tampilan"
+    },
+    {
+        "judul": "Banner Beranda",
+        "key": "tampilkan_banner",
+        "value": "1",
+        "type": "select",
+        "keterangan": "Tampilkan banner sambutan besar di halaman beranda",
+        "options": {
+            "1": "Ya",
+            "0": "Tidak"
+        },
+        "attributes": {
+            "class": "select2"
+        },
+        "readonly": false,
+        "group": "Tampilan"
+    },
+    {
+        "judul": "Teks Sambutan Banner",
+        "key": "teks_sambutan",
+        "value": "Selamat Datang di Website Resmi",
+        "type": "input-text",
+        "keterangan": "Teks kecil di atas nama [desa] pada banner beranda",
+        "options": null,
+        "readonly": false,
+        "group": "Tampilan"
+    },
+    {
+        "judul": "Kata Berganti di Banner",
+        "key": "kata_berganti",
+        "value": "Melayani, Transparan, Inovatif, Berdaya",
+        "type": "input-text",
+        "keterangan": "Kata-kata yang bergantian muncul di banner (pisahkan dengan koma). Kosongkan untuk menyembunyikan.",
+        "options": null,
+        "readonly": false,
+        "group": "Tampilan"
+    },
+    {
+        "judul": "Bilah Statistik di Banner",
+        "key": "tampilkan_statistik",
+        "value": "1",
+        "type": "select",
+        "keterangan": "Tampilkan bilah kaca berisi angka penduduk dan pengunjung (dengan animasi hitung) di banner beranda",
+        "options": {
+            "1": "Ya",
+            "0": "Tidak"
+        },
+        "attributes": {
+            "class": "select2"
+        },
+        "readonly": false,
+        "group": "Tampilan"
+    },
+    {
+        "judul": "Bagian Layanan Beranda",
+        "key": "tampilkan_pintasan",
+        "value": "1",
+        "type": "select",
+        "keterangan": "Tampilkan bagian gelap berisi kartu kaca Layanan Mandiri, Statistik, Pembangunan, dan Pengaduan di beranda",
+        "options": {
+            "1": "Ya",
+            "0": "Tidak"
+        },
+        "attributes": {
+            "class": "select2"
+        },
+        "readonly": false,
+        "group": "Tampilan"
+    },
+    {
+        "judul": "Pertanyaan Umum (FAQ)",
+        "key": "tampilkan_faq",
+        "value": "1",
+        "type": "select",
+        "keterangan": "Tampilkan kartu Pertanyaan Umum di beranda",
+        "options": {
+            "1": "Ya",
+            "0": "Tidak"
+        },
+        "attributes": {
+            "class": "select2"
+        },
+        "readonly": false,
+        "group": "Tampilan"
+    },
+    {
+        "judul": "Layar Memuat (Loading)",
+        "key": "layar_memuat",
+        "value": "0",
+        "type": "select",
+        "keterangan": "Tampilkan animasi logo saat halaman sedang dimuat",
+        "options": {
+            "1": "Ya",
+            "0": "Tidak"
+        },
+        "attributes": {
+            "class": "select2"
+        },
+        "readonly": false,
+        "group": "Tampilan"
+    },
+    {
+        "judul": "Animasi Halaman",
+        "key": "animasi",
+        "value": "1",
+        "type": "select",
+        "keterangan": "Aktifkan animasi muncul saat digulir, efek sorot pada kartu, dan navbar pintar",
+        "options": {
+            "1": "Ya",
+            "0": "Tidak"
+        },
+        "attributes": {
+            "class": "select2"
+        },
+        "readonly": false,
+        "group": "Tampilan"
+    },
+    {
+        "judul": "Jumlah Pembangunan Perhalaman",
+        "key": "jumlah_pembangunan_perhalaman",
+        "value": 10,
+        "type": "input-number",
+        "keterangan": "Jumlah pembangunan yang ditampilkan dalam satu halaman",
+        "options": null,
+        "attributes": {
+            "min": 1,
+            "max": 50,
+            "step": 1
+        },
+        "readonly": false,
+        "link": true,
+        "group": "Pembangunan"
+    },
+    {
+        "judul": "Jumlah Pengaduan Perhalaman",
+        "key": "jumlah_pengaduan_perhalaman",
+        "value": 10,
+        "type": "input-number",
+        "keterangan": "Jumlah pengaduan yang ditampilkan dalam satu halaman",
+        "options": null,
+        "attributes": {
+            "min": 1,
+            "max": 50,
+            "step": 1
+        },
+        "readonly": false,
+        "link": true,
+        "group": "Pengaduan"
+    }
+]

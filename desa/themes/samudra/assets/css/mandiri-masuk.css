@@ -1,0 +1,336 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
+/* ==========================================================================
+   Tema Samudra: halaman masuk Layanan Mandiri (masuk, masuk e-KTP, lupa PIN,
+   daftar, verifikasi).
+   Halaman ini milik inti OpenSID. OpenSID menyediakan file ubahan resmi yang
+   aman dari pembaruan: desa/pengaturan/siteman/siteman_mandiri.css.
+   Isi file ini disalin ke sana (lihat catatan_rilis.md).
+   ========================================================================== */
+
+:root {
+  --smd-navy: #0a1f44;
+  --smd-900: #0b2a5b;
+  --smd-800: #0f3d86;
+  --smd-700: #154baa;
+  --smd-600: #1d64d8;
+  --smd-500: #3b82f6;
+  --smd-400: #60a5fa;
+  --smd-300: #93c5fd;
+  --smd-200: #bfdbfe;
+  --smd-100: #dbeafe;
+  --smd-50: #eff6ff;
+  --smd-text: #12284b;
+  --smd-muted: #5b6b86;
+  --smd-border: #dbe6f6;
+  --smd-bg: #f3f7fd;
+  --smd-font: 'Plus Jakarta Sans', Poppins, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* ---------- Latar: foto latar login tetap dipakai, ditutup lapisan biru Samudra ---------- */
+body.login {
+  font-family: var(--smd-font);
+  color: var(--smd-text);
+  background-color: var(--smd-900);
+  background-size: cover;
+  -webkit-background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+body.login::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(900px 600px at 0% 0%, rgba(96, 165, 250, .35), transparent 62%),
+    radial-gradient(800px 600px at 100% 100%, rgba(59, 130, 246, .3), transparent 62%),
+    linear-gradient(135deg, rgba(10, 31, 68, .93), rgba(15, 61, 134, .85) 50%, rgba(29, 100, 216, .76));
+}
+.login .top-content { position: relative; z-index: 1; }
+.login .top-content .inner-bg {
+  background: transparent;
+  height: auto;
+  min-height: 100vh;
+  padding: 32px 0;
+}
+.login .container { width: 100%; max-width: 1040px; padding: 0 16px; }
+.login .row { margin: 0; width: 100%; }
+
+/* ---------- Kartu ---------- */
+.login .form-box.col-sm-6 {
+  float: none;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0;
+  background: #fff;
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: 0 30px 80px rgba(5, 15, 40, .45), 0 0 0 1px rgba(255, 255, 255, .08);
+  animation: smd-masuk-naik .7s cubic-bezier(.2, .7, .2, 1) backwards;
+}
+.login .form-box > [class*="form-"] { border-radius: 0; }
+
+/* Panel identitas desa */
+.login .form-box > .form-top {
+  position: relative;
+  overflow: hidden;
+  padding: 34px 26px 30px;
+  text-align: center;
+  color: #fff;
+  background: linear-gradient(150deg, var(--smd-900), var(--smd-700) 55%, var(--smd-500));
+}
+.login .form-box > .form-top::before,
+.login .form-box > .form-top::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(255, 255, 255, .13), rgba(255, 255, 255, 0) 70%);
+}
+.login .form-box > .form-top::before { width: 340px; height: 340px; top: -150px; right: -120px; }
+.login .form-box > .form-top::after { width: 260px; height: 260px; bottom: -150px; left: -110px; opacity: .7; }
+.login .form-top > a,
+.login .form-top > .login-footer-top { position: relative; z-index: 1; }
+.login .form-top img {
+  width: 92px;
+  height: 92px;
+  max-width: none;
+  object-fit: contain;
+  margin: 0 auto;
+  padding: 12px;
+  border-radius: 26px;
+  background: rgba(255, 255, 255, .96);
+  box-shadow: 0 12px 30px rgba(5, 15, 40, .3);
+}
+.login .form-top > .login-footer-top { margin-top: 0; }
+.login .form-top > .login-footer-top h1 {
+  margin: 18px 0 4px;
+  padding: 0;
+  font-family: var(--smd-font);
+  font-weight: 800;
+  font-size: clamp(22px, 2.6vw, 30px);
+  line-height: 1.25;
+  letter-spacing: -.01em;
+  color: #fff;
+  text-shadow: none;
+}
+/* Baris pertama ("LAYANAN MANDIRI") jadi label kecil di atas nama desa */
+.login .form-top > .login-footer-top h1::first-line {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .2em;
+  color: var(--smd-200);
+}
+.login .form-top > .login-footer-top h3 {
+  margin: 0;
+  font-family: var(--smd-font);
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.65;
+  letter-spacing: .01em;
+  color: rgba(255, 255, 255, .78);
+}
+
+/* Panel formulir */
+.login .form-box > .form-bottom {
+  margin: 0;
+  padding: 28px 22px 20px;
+  background: #fff;
+  text-align: center;
+}
+.login .form-bottom > .form-login,
+.login .form-bottom .form-group { width: 100%; margin: 0 0 12px; }
+.login .form-bottom h3 { font-family: var(--smd-font); font-size: 16px; color: var(--smd-900); }
+.login .login-form .row { margin: 0 -6px; width: auto; }
+.login .login-form .row > [class*="col-"] { padding: 0 6px; }
+
+/* ---------- Isian ---------- */
+.login .login-form .form-control,
+.login .login-form input.form-control {
+  font-family: var(--smd-font);
+  color: var(--smd-text);
+  background-color: var(--smd-bg);
+  border: 1.5px solid var(--smd-border);
+  border-radius: 12px;
+  box-shadow: none;
+  transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease;
+}
+.login .form-bottom .form-login input.form-control {
+  width: 100%;
+  height: 52px;
+  background-color: var(--smd-bg);
+  border: 1.5px solid var(--smd-border);
+  margin: 0;
+  padding: 0 16px;
+  line-height: 50px;
+  font-size: 15px;
+  font-weight: 500;
+  text-align: left;
+  letter-spacing: .02em;
+  border-radius: 14px;
+  background-repeat: no-repeat;
+  background-position: 16px 50%;
+  background-size: 18px 18px;
+}
+.login .login-form .form-control:focus,
+.login .form-bottom .form-login input.form-control:focus {
+  outline: 0;
+  background-color: #fff;
+  border-color: var(--smd-400);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, .16);
+}
+.login .login-form .form-control::placeholder { color: #8a9ab3; font-weight: 500; letter-spacing: .02em; }
+
+/* Ikon di dalam isian NIK, PIN, kartu, dan surel */
+.login .form-bottom .form-login input[name="nik"],
+.login .form-bottom .form-login input[name="password"],
+.login .form-bottom .form-login input[name="tag_id_card"],
+.login .form-bottom .form-login input[name="email"] { padding-left: 46px; }
+.login .form-bottom .form-login input[name="nik"] {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='14' rx='2'/%3E%3Ccircle cx='9' cy='11' r='2'/%3E%3Cpath d='M6.5 16c.6-1.3 1.5-2 2.5-2s1.9.7 2.5 2M14 10h4M14 14h3'/%3E%3C/svg%3E");
+}
+.login .form-bottom .form-login input[name="password"] {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='11' width='16' height='10' rx='2'/%3E%3Cpath d='M8 11V7a4 4 0 0 1 8 0v4'/%3E%3C/svg%3E");
+}
+.login .form-bottom .form-login input[name="tag_id_card"] {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='5' width='20' height='14' rx='2'/%3E%3Cpath d='M2 10h20M6 15h4'/%3E%3C/svg%3E");
+}
+.login .form-bottom .form-login input[name="email"] {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='14' rx='2'/%3E%3Cpath d='m3 7 9 6 9-6'/%3E%3C/svg%3E");
+}
+
+.login .login-form .input-group-addon {
+  background: var(--smd-50);
+  border: 1.5px solid var(--smd-border);
+  color: var(--smd-600);
+}
+.login .login-form .input-group .form-control:first-child { border-radius: 12px 0 0 12px; }
+.login .login-form .input-group-addon:last-child { border-left: 0; border-radius: 0 12px 12px 0; }
+
+/* Tampilkan PIN */
+.login .login-form center { font-size: 13.5px; line-height: 1.4; }
+.login .login-form center label { font-weight: 600; color: var(--smd-muted); cursor: pointer; }
+.login .login-form input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0 4px 0 0;
+  vertical-align: -3px;
+  accent-color: var(--smd-600);
+  cursor: pointer;
+}
+
+/* ---------- Tombol ---------- */
+.login button.btn,
+.login .form-bottom form button.btn {
+  width: 100% !important;
+  height: 50px;
+  margin: 0;
+  padding: 0 16px;
+  line-height: 47px;
+  border: 1.5px solid var(--smd-200);
+  border-radius: 14px;
+  background: var(--smd-50);
+  color: var(--smd-700);
+  font-family: var(--smd-font);
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  box-shadow: none;
+  opacity: 1;
+  transition: transform .2s ease, box-shadow .2s ease, background-color .2s ease, border-color .2s ease, color .2s ease;
+}
+.login button.btn b { font-weight: 700; }
+.login .form-bottom form button.btn:hover,
+.login .form-bottom form button.btn:focus,
+.login .form-bottom form button.btn:active,
+.login .form-bottom form button.btn:active:focus {
+  opacity: 1;
+  outline: 0;
+  background: var(--smd-100);
+  border-color: var(--smd-300);
+  color: var(--smd-800);
+  transform: translateY(-1px);
+}
+.login button.btn[type="submit"],
+.login .form-bottom form button.btn[type="submit"] {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--smd-500), var(--smd-600) 45%, var(--smd-700));
+  color: #fff;
+  box-shadow: 0 12px 26px rgba(29, 100, 216, .35);
+}
+.login .form-bottom form button.btn[type="submit"]:hover,
+.login .form-bottom form button.btn[type="submit"]:focus,
+.login .form-bottom form button.btn[type="submit"]:active,
+.login .form-bottom form button.btn[type="submit"]:active:focus {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--smd-400), var(--smd-500) 45%, var(--smd-600));
+  color: #fff;
+  box-shadow: 0 16px 30px rgba(29, 100, 216, .42);
+}
+.login button.btn[disabled] { opacity: .55; transform: none; cursor: not-allowed; }
+.login button.btn:focus-visible { box-shadow: 0 0 0 4px rgba(59, 130, 246, .25); }
+
+/* ---------- Pemberitahuan & kaki ---------- */
+.login .alert {
+  border-radius: 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: left;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+.login .alert p { margin: 0; }
+.login .alert-danger { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
+.login .alert-info { background: var(--smd-50); border: 1px solid var(--smd-200); color: var(--smd-text); }
+.login .alert-info h3 { font-size: 14px; line-height: 1.6; color: var(--smd-text); margin: 0; }
+.login .login-footer-bottom { margin-top: 6px; line-height: 1.6; }
+.login .login-footer-bottom a { font-size: 12.5px; font-weight: 600; color: var(--smd-muted); }
+.login .login-footer-bottom a:hover { color: var(--smd-600); }
+
+/* ---------- Layar lebar: dua kolom ---------- */
+@media screen and (min-width: 768px) {
+  .login .top-content .inner-bg { padding: 48px 0; }
+  .login .form-box.col-sm-6 { flex-direction: row; align-items: stretch; min-height: 520px; }
+  .login .form-box > [class*="form-"] { max-height: none; overflow: visible; }
+  .login .form-box > .form-top {
+    width: 46%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 48px 40px;
+  }
+  .login .form-top img { width: 112px; height: 112px; padding: 14px; border-radius: 30px; }
+  .login .form-box > .form-bottom {
+    width: 54%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    margin: 0;
+    padding: 44px 48px 28px;
+  }
+  .login .form-bottom > .form-login { width: 100%; margin: 0 0 14px; }
+  .login .form-bottom .form-login input.form-control { width: 100%; margin: 0; }
+}
+
+@media (max-width: 767px) {
+  .login .top-content .inner-bg { padding: 20px 0; }
+  .login .container { padding: 0 14px; }
+  .login .form-box.col-sm-6 { border-radius: 24px; }
+  .login .form-box > .form-top { padding: 28px 22px 26px; }
+  .login .form-top img { width: 80px; height: 80px; padding: 10px; border-radius: 22px; }
+  .login .form-top > .login-footer-top h3 { font-size: 13px; }
+}
+
+@keyframes smd-masuk-naik {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .login .form-box.col-sm-6 { animation: none; }
+  .login button.btn { transition: none; }
+}

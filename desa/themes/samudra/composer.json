@@ -1,0 +1,16 @@
+{
+    "name": "themes/samudra",
+    "type": "library",
+    "version": "2.2.1",
+    "description": "Tema desa modern bernuansa biru-putih: bersih, intuitif, dan responsif di semua layar. Dibangun di atas fondasi tema Esensi.",
+    "license": "GPL-3.0-or-later",
+    "keywords": [
+        "Themes",
+        "OpenSID"
+    ],
+    "authors": [
+        {
+            "name": "Ngurah Oka"
+        }
+    ]
+}

@@ -1,0 +1,2 @@
+<a href="<?php echo e($url); ?>" onclick="<?php echo e($onclick ?? ''); ?>" id="<?php echo e($id ?? ''); ?>" class="btn btn-social btn-info btn-sm visible-xs-block visible-sm-inline-block visible-md-inline-block visible-lg-inline-block" title="Kembali Ke <?php echo e($label); ?>"><i class="fa fa-arrow-circle-left"></i> Kembali Ke <?php echo e($label); ?></a>
+<?php /**PATH C:\xampp\htdocs\opensid\resources\views/admin/layouts/components/tombol_kembali.blade.php ENDPATH**/ ?>

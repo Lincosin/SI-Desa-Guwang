@@ -1,0 +1,12 @@
+/*
+ * Tema Samudra - tempat menambahkan gaya Anda sendiri.
+ *
+ * Warna utama diatur dari Admin > Pengaturan > Tema > Samudra > Pengaturan (Warna Utama).
+ * Variabel di bawah mengatur warna pendamping (dipakai tombol & aksen di halaman data).
+ */
+:root {
+  --secondary-base-color: #0e8fe0;
+  --secondary-darken-color: #0369a1;
+  --accent-base-color: #2563eb;
+  --accent-darken-color: #1e40af;
+}
