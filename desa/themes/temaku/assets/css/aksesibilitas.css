@@ -1,0 +1,184 @@
+/* Alat Aksesibilitas Temaku. Awalan kelas a11y- agar tidak bentrok dengan Tailwind/Bootstrap tema. */
+
+/* ---- Efek yang dipasang ke <html> oleh aksesibilitas.js ---- */
+html.a11y-gray { filter: grayscale(1); }
+html.a11y-neg { filter: invert(1) hue-rotate(180deg); }
+html.a11y-gray.a11y-neg { filter: grayscale(1) invert(1) hue-rotate(180deg); }
+/* Gambar dan video dibalik lagi supaya foto tidak tampak seperti negatif film */
+html.a11y-neg img,
+html.a11y-neg video,
+html.a11y-neg picture,
+html.a11y-neg .leaflet-container,
+html.a11y-neg iframe { filter: invert(1) hue-rotate(180deg); }
+html.a11y-underline a { text-decoration: underline !important; text-underline-offset: 3px; }
+
+/* ---- Widget ---- */
+.a11y-widget {
+    --a11y-accent: var(--primary-base-color, #006496);
+    position: fixed;
+    top: 50%;
+    right: 0;
+    z-index: 9990;
+    transform: translateY(-50%);
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.a11y-fab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 52px;
+    padding: 0;
+    border: 0;
+    border-radius: 14px 0 0 14px;
+    background: var(--a11y-accent);
+    color: #fff;
+    cursor: pointer;
+    box-shadow: -2px 2px 10px rgba(0, 0, 0, .25);
+    transition: width .15s ease, background-color .15s ease;
+}
+.a11y-fab:hover,
+.a11y-fab[aria-expanded="true"] { width: 52px; }
+.a11y-fab:focus-visible,
+.a11y-item:focus-visible,
+.a11y-close:focus-visible { outline: 3px solid #f59e0b; outline-offset: 2px; }
+
+.a11y-panel {
+    position: absolute;
+    top: 50%;
+    right: 56px;
+    width: 280px;
+    max-height: 80vh;
+    overflow-y: auto;
+    transform: translateY(-50%);
+    border-radius: 14px;
+    background: #fff;
+    color: #1f2937;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, .28);
+}
+.a11y-panel[hidden] { display: none; }
+
+.a11y-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px 12px 16px;
+    border-radius: 14px 14px 0 0;
+    background: var(--a11y-accent);
+    color: #fff;
+    font-size: 15px;
+}
+.a11y-close {
+    width: 30px;
+    height: 30px;
+    border: 0;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, .18);
+    color: #fff;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+}
+.a11y-close:hover { background: rgba(255, 255, 255, .32); }
+
+.a11y-list { margin: 0; padding: 8px; list-style: none; }
+.a11y-list li + li { margin-top: 4px; }
+
+.a11y-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #fff;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color .15s ease, border-color .15s ease;
+}
+.a11y-item:hover { background: #f3f4f6; border-color: #cbd5e1; }
+.a11y-ico {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: #eef2f7;
+    color: var(--a11y-accent);
+    font-weight: 700;
+    font-size: 14px;
+}
+.a11y-txt { flex: 1 1 auto; font-weight: 600; }
+.a11y-val { font-size: 12px; font-weight: 700; color: var(--a11y-accent); }
+
+/* Saklar */
+.a11y-sw {
+    position: relative;
+    flex: 0 0 36px;
+    height: 20px;
+    border-radius: 999px;
+    background: #cbd5e1;
+    transition: background-color .15s ease;
+}
+.a11y-sw::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .3);
+    transition: transform .15s ease;
+}
+.a11y-item[aria-pressed="true"] { border-color: var(--a11y-accent); background: #f0f7fb; }
+.a11y-item[aria-pressed="true"] .a11y-sw { background: var(--a11y-accent); }
+.a11y-item[aria-pressed="true"] .a11y-sw::after { transform: translateX(16px); }
+.a11y-item[aria-pressed="true"] .a11y-ico { background: var(--a11y-accent); color: #fff; }
+.a11y-item:disabled { opacity: .55; cursor: not-allowed; }
+.a11y-reset .a11y-ico { background: #fee2e2; color: #b91c1c; }
+
+.a11y-help { margin: 4px 4px 2px; font-size: 12px; color: #4b5563; }
+.a11y-help[hidden] { display: none; }
+
+.a11y-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Mode gelap tema */
+html.dark .a11y-panel { background: #141d30; color: #e6ebf5; }
+html.dark .a11y-item { background: #141d30; border-color: #2a3650; }
+html.dark .a11y-item:hover { background: #1b2640; border-color: #3a4a6b; }
+html.dark .a11y-ico { background: #1b2640; color: #7cc4ec; }
+html.dark .a11y-val { color: #7cc4ec; }
+html.dark .a11y-sw { background: #3a4a6b; }
+html.dark .a11y-item[aria-pressed="true"] { background: #16233d; }
+html.dark .a11y-item[aria-pressed="true"] .a11y-ico { background: var(--a11y-accent); color: #fff; }
+html.dark .a11y-reset .a11y-ico { background: #3b1d1d; color: #fca5a5; }
+html.dark .a11y-help { color: #9aa3b2; }
+
+@media (max-width: 480px) {
+    .a11y-panel { width: min(280px, calc(100vw - 70px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .a11y-fab, .a11y-item, .a11y-sw, .a11y-sw::after { transition: none; }
+}
+@media print {
+    .a11y-widget { display: none !important; }
+}

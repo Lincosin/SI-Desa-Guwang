@@ -11,17 +11,6 @@
             <td> : </td>
             <td>{{ $penduduk['nama'] }}</td>
         </tr>
-        {{-- KUSTOM pendaftaran-mandiri --}}
-        <tr>
-            <th>No. HP</td>
-            <td> : </td>
-            <td>{{ $penduduk['telepon'] ?: '-' }}</td>
-        </tr>
-        <tr>
-            <th>Email</td>
-            <td> : </td>
-            <td>{{ $penduduk['email'] ?: '-' }}</td>
-        </tr>
     </table>
     <div class="box box-danger">
         <div class="box-body">
@@ -40,17 +29,13 @@
         </div>
     </div>
     <div class="form-group">
-        {{-- KUSTOM pendaftaran-mandiri: verifikasi selalu bisa, walau email/Telegram belum diverifikasi --}}
-        <label style="margin-top: 10px; margin-bottom: 0px;">Setelah diverifikasi, beri tahu warga melalui : </label>
-        <div class="radio">
-            <label style="font-size: 13.7px;">
-                <input type="radio" value="tanpa_kirim" id="tanpa_kirim" name="pilihan_kirim" checked> Tidak dikirim (beri tahu warga sendiri)
-            </label>
-        </div>
+        @if ($tgl_verifikasi_telegram || $tgl_verifikasi_email)
+            <label style="margin-top: 10px; margin-bottom: 0px;">Kirim Pemberitahuan Verifikasi Melalui : </label>
+        @endif
         @if ($tgl_verifikasi_email)
             <div class="radio">
                 <label style="font-size: 13.7px;">
-                    <input type="radio" value="kirim_email" id="kirim_email" name="pilihan_kirim"> Email
+                    <input type="radio" value="kirim_email" id="kirim_email" name="pilihan_kirim" checked> Email
                 </label>
             </div>
         @endif
@@ -58,7 +43,7 @@
         @if ($tgl_verifikasi_telegram)
             <div class="radio">
                 <label style="font-size: 13.7px;">
-                    <input type="radio" value="kirim_telegram" id="kirim_telegram" name="pilihan_kirim"> Telegram
+                    <input type="radio" value="kirim_telegram" id="kirim_telegram" name="pilihan_kirim" checked> Telegram
                 </label>
             </div>
         @endif
@@ -67,7 +52,9 @@
 <div class="modal-footer">
     <button type="reset" class="btn btn-social btn-flat btn-danger btn-sm pull-left"><i class='fa fa-times'></i> Batal</button>
 
-    <button type="submit" class="btn btn-social btn-flat btn-info btn-sm" id="ok"><i class='fa fa-check'></i> Verifikasi &amp; Aktifkan</button>
+    @if ($tgl_verifikasi_telegram || $tgl_verifikasi_email)
+        <button type="submit" class="btn btn-social btn-flat btn-info btn-sm" id="ok"><i class='fa fa-check'></i> Verifikasi</button>
+    @endif
 </div>
 </form>
 @include('admin.layouts.components.form_modal_validasi')

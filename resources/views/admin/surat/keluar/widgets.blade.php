@@ -7,14 +7,12 @@
     </div>
 @endif
 <div class="row">
-    {{-- KUSTOM: Kades/Sekdes/Kadus menyetujui surat dari menu Permohonan Surat, bagi mereka Arsip Layanan hanya arsip --}}
-    @if ($operator)
     <div class="col-lg-3 col-sm-6 col-xs-12 widget-surat">
         <a href="{{ ci_route('keluar/masuk') }}">
             <div class="info-box bg-aqua {{ $tab_ini == 11 ? 'active' : '' }}">
                 <span class="info-box-icon"><i class="fa fa-envelope-o fa-nav"></i></span>
                 <div class="info-box-content">
-                    <span class="info-box-text">Menunggu Persetujuan</span>{{-- KUSTOM: dulu "Permohonan", mirip menu Permohonan Surat --}}
+                    <span class="info-box-text">Permohonan</span>
                     <span class="info-box-number">{{ $widgets['suratMasuk'] }}</span>
                     <div class="progress">
                         <div class="progress-bar" style="width: 100%"></div>
@@ -24,7 +22,6 @@
             </div>
         </a>
     </div>
-    @endif
 
     <div class="col-lg-3 col-sm-6 col-xs-12 widget-surat">
         <a href="{{ ci_route('keluar') }}">

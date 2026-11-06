@@ -700,68 +700,10 @@ class TinyMCE
 
         $this->cekFontSurat($surat, $pdf->pdf->getFontList());
 
-        $pdf->writeHTML($surat); // buat surat
-
-        // KUSTOM: surat yang sedikit lebih dari 1 halaman diperkecil merata supaya muat 1 halaman
-        $out = $this->ringkasSatuHalaman($pdf, $surat, $margins, $defaultFont);
-        if ($out === null) {
-            $pdf->output($out = tempnam(sys_get_temp_dir(), '') . '.pdf', 'F');
-        }
+        $pdf->writeHTML($surat) // buat surat
+            ->output($out = tempnam(sys_get_temp_dir(), '') . '.pdf', 'F');
 
         return $this->pdfMerge->add($out);
-    }
-
-    /**
-     * KUSTOM: bila surat lebih dari 1 halaman, cetak ulang di kertas yang diperbesar (skala k) lalu
-     * perkecil kembali ke ukuran kertas asli. Hasilnya seluruh isi (kop, teks, tanda tangan) mengecil
-     * merata. Skala terbesar 1,25 (huruf tetap minimal 80% ukuran asli); bila tetap tidak muat, surat
-     * dibiarkan apa adanya (surat yang memang panjang tetap beberapa halaman).
-     *
-     * @return string|null path PDF hasil ringkasan, null bila tidak perlu/tidak bisa diringkas
-     */
-    private function ringkasSatuHalaman(Html2Pdf $pdf, string $surat, $margins, $defaultFont): ?string
-    {
-        if ($pdf->pdf->getNumPages() <= 1) {
-            return null;
-        }
-
-        // pagedim TCPDF dalam pt, ubah ke mm
-        $lebar  = $pdf->pdf->getPageWidth(1) / $pdf->pdf->getScaleFactor();
-        $tinggi = $pdf->pdf->getPageHeight(1) / $pdf->pdf->getScaleFactor();
-        $arah   = $lebar > $tinggi ? 'L' : 'P';
-        $margins = is_array($margins) ? array_values($margins) : [$margins, $margins, $margins, $margins];
-
-        foreach ([1.05, 1.1, 1.15, 1.2, 1.25] as $k) {
-            try {
-                $besar = (new Html2Pdf($arah, [$lebar * $k, $tinggi * $k], 'en', true, 'UTF-8', array_map(static fn ($m) => (float) $m * $k, $margins)))
-                    ->setTestTdInOnePage(false)
-                    ->setDefaultFont($defaultFont);
-                $besar->writeHTML($surat);
-            } catch (\Throwable $e) {
-                log_message('error', 'Ringkas surat 1 halaman gagal: ' . $e->getMessage());
-
-                return null;
-            }
-
-            if ($besar->pdf->getNumPages() > 1) {
-                continue;
-            }
-
-            $besar->output($sementara = tempnam(sys_get_temp_dir(), '') . '.pdf', 'F');
-            $kecil = new \TCPDI($arah, 'mm', [$lebar, $tinggi]);
-            $kecil->setPrintHeader(false);
-            $kecil->setPrintFooter(false);
-            $kecil->setSourceFile($sementara);
-            $halaman = $kecil->importPage(1);
-            $kecil->AddPage($arah, [$lebar, $tinggi]);
-            $kecil->useTemplate($halaman, 0, 0, $lebar, $tinggi);
-            $kecil->Output($out = tempnam(sys_get_temp_dir(), '') . '.pdf', 'F');
-            @unlink($sementara);
-
-            return $out;
-        }
-
-        return null;
     }
 
     /**
@@ -853,11 +795,6 @@ class TinyMCE
         }
 
         $final_html = implode('', $processed_lampiran);
-
-        // KUSTOM: tidak ada lampiran yang dipilih -> jangan buat PDF lampiran kosong (dulu jadi halaman putih di akhir surat)
-        if (trim(strip_tags($final_html, '<img><table>')) === '') {
-            return;
-        }
 
         // pengecekan jika surat nikah maka gunakan margin yang berbeda
         $margin_cm_to_mm = [5, 5, 5, 8];

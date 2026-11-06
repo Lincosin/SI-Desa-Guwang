@@ -1,0 +1,15 @@
+{
+    "name": "themes/temaku",
+    "type": "library",
+    "description": "Tema OpenSID",
+    "license": "GPL-3.0-or-later",
+    "keywords": [
+        "Themes",
+        "OpenSID"
+    ],
+    "authors": [
+        {
+            "name": "willy"
+        }
+    ]
+}

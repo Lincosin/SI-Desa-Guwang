@@ -42,9 +42,6 @@ use App\Models\Penduduk;
 
 class KodeIsianGambar
 {
-    // KUSTOM tanda tangan Kades: gambar PNG transparan 1x1 sebagai pengganti tanda tangan sebelum surat disetujui
-    private const GAMBAR_KOSONG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
-
     private $urls_id;
 
     public function __construct(private $request, private $result, private $surat = null, private $lampiran = false)
@@ -75,9 +72,6 @@ class KodeIsianGambar
 
         // QR_Code Surat
         $this->handleQrCode();
-
-        // KUSTOM tanda tangan Kades
-        $this->handleTtdKades();
 
         return [
             'result'  => $this->result,
@@ -159,40 +153,6 @@ class KodeIsianGambar
         }
 
         $this->urls_id = $cek['urls_id'] ?? null;
-    }
-
-    /**
-     * KUSTOM tanda tangan Kades: kode [ttd_kades] (juga dari [qr_bsre] bila TTE nonaktif, lihat KodeIsianSurat)
-     * diganti gambar tanda tangan Kepala Desa hanya setelah surat
-     * disetujui Kepala Desa. Sebelumnya diganti gambar kosong ber-alt "[ttd_kades]" agar tempatnya tetap dan
-     * bisa diganti tanda tangan saat PDF dibuat ulang setelah surat disetujui.
-     */
-    private function handleTtdKades(): void
-    {
-        if (stripos((string) $this->result, '[ttd_kades]') === false) {
-            return;
-        }
-
-        $ttd       = LogSurat::gambarTtdKades();
-        $disetujui = $ttd && $this->surat instanceof LogSurat && $this->surat->ditandatanganiKades();
-        $lebar     = 140;
-        $tinggi    = 75;
-
-        if ($disetujui && ($ukuran = @getimagesizefromstring((string) base64_decode(substr($ttd, strpos($ttd, ',') + 1))))) {
-            $lebar = (int) round($ukuran[0] * $tinggi / max(1, $ukuran[1]));
-            if ($lebar > 220) {
-                $tinggi = (int) round($tinggi * 220 / $lebar);
-                $lebar  = 220;
-            }
-        }
-
-        $img = $disetujui
-            ? "<img src=\"{$ttd}\" width=\"{$lebar}\" height=\"{$tinggi}\" />"
-            : '<img src="' . self::GAMBAR_KOSONG . "\" width=\"{$lebar}\" height=\"{$tinggi}\" alt=\"[ttd_kades]\" />";
-
-        // Gambar kosong dari pembuatan sebelumnya dikembalikan ke kode, lalu semua kode diganti
-        $this->result = preg_replace('/<img[^>]*alt="\[ttd_kades\]"[^>]*>/i', '[ttd_kades]', (string) $this->result);
-        $this->result = str_ireplace('[ttd_kades]', $img, $this->result);
     }
 
     /**

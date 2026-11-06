@@ -9,9 +9,9 @@
 
 $db['default']['hostname'] = 'localhost';
 $db['default']['username'] = 'root';
-$db['default']['password'] = 'eyJpdiI6IjJFbzhZd0ZjODFDRkN4U0Rvb1V5bWc9PSIsInZhbHVlIjoieDA0RC9aZ053TUx1b1V2SGNBNGNYdz09IiwibWFjIjoiMzI1NTExMWY2NzJlYjJmODMzZWI0N2I4OWQ4NzczOTA3ZTg2NmIwOTE4OTUzZjZhZDUwMTgyODRiY2NmN2I5NSIsInRhZyI6IiJ9';
+$db['default']['password'] = 'eyJpdiI6Imo0L3FSbjRqcS80MlJwQ2JSSWI0Snc9PSIsInZhbHVlIjoia0dRWiswZXc3UVNvRWFON0F4YWdLQT09IiwibWFjIjoiMDEyNTkxMDNiYTgyNGVkNDVhYTI0MDUzZGMyNzBkNjU0YmVhZWMzMGY3ZjBlZTRjMTVjYzI4OTYwMDNlMmIwOCIsInRhZyI6IiJ9';
 $db['default']['port']     = 3306;
-$db['default']['database'] = 'opensid';
+$db['default']['database'] = 'guwang';
 $db['default']['dbcollat'] = 'utf8mb4_general_ci';
 
 /*

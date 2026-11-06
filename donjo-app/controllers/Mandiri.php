@@ -196,12 +196,6 @@ class Mandiri extends Admin_Controller
                 $this->kirimEmail($data);
                 break;
 
-            // KUSTOM pendaftaran-mandiri: aktifkan tanpa kirim pemberitahuan (email/Telegram pendaftar tidak diverifikasi)
-            case 'tanpa_kirim':
-                PendudukMandiri::where(['id_pend' => $id_pend])->update(['aktif' => true]);
-                redirect_with('success', 'Akun Layanan Mandiri ' . e($data->nama) . ' sudah diaktifkan. Beri tahu warga bahwa ia sudah bisa masuk dengan NIK dan password yang dibuatnya.');
-                break;
-
             default:
                 redirect($this->controller);
                 break;

@@ -1,12 +1,36 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>Layanan Mandiri {{ ucwords(setting('sebutan_desa') . ' ' . ($desa['nama_desa'] ?? '')) . get_dynamic_title_page_from_path() }}</title>
-    <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+    {{-- TEMAKU: pembatas zoom (maximum-scale=1, user-scalable=no) dihapus supaya warga bisa memperbesar halaman --}}
+    <meta content="width=device-width, initial-scale=1" name="viewport">
+    <meta name="color-scheme" content="light dark">
     <link rel="shortcut icon" href="{{ favico_desa() }}" />
+
+    {{-- TEMAKU: pasang pilihan mode gelap/terang dan aksesibilitas SEBELUM CSS dimuat agar halaman tidak berkedip.
+         Kunci localStorage sama dengan tema utama (temaku-tema, temaku-a11y), jadi pilihan warga ikut di kedua halaman. --}}
+    <script>
+        (function () {
+            var r = document.documentElement, pilihan = 'auto';
+            try {
+                var t = localStorage.getItem('temaku-tema');
+                if (t === 'gelap' || t === 'terang') { pilihan = t; }
+                var a = JSON.parse(localStorage.getItem('temaku-a11y') || '{}') || {};
+                var u = Math.max(-2, Math.min(5, parseInt(a.size, 10) || 0));
+                if (u) { r.style.fontSize = (100 + u * 10) + '%'; }
+                if (a.gray === true) { r.classList.add('a11y-gray'); }
+                if (a.neg === true) { r.classList.add('a11y-neg'); }
+                if (a.underline === true) { r.classList.add('a11y-underline'); }
+            } catch (e) { /* localStorage diblokir: ikut pengaturan perangkat */ }
+            var gelap = pilihan === 'gelap' || (pilihan === 'auto' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            r.classList.toggle('dark', gelap);
+            r.setAttribute('data-tema', pilihan);
+        })();
+    </script>
+
     <!-- Bootstrap 3.3.7 -->
     <link rel="stylesheet" href="{{ asset('bootstrap/css/bootstrap.min.css') }}">
     <!-- Font Awesome -->
@@ -31,6 +55,10 @@
     @if (cek_koneksi_internet())
         <!-- Form Wizard - smartWizard -->
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/smartwizard@5/dist/css/smart_wizard_all.min.css">
+        <!-- TEMAKU: font Plus Jakarta Sans seperti tema utama (butuh internet; tanpa itu dipakai font cadangan) -->
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
     @endif
 
     @if ($controller == 'lapak')
@@ -38,6 +66,7 @@
         <link rel="stylesheet" href="{{ asset('css/leaflet.css') }}">
         <link rel="stylesheet" href="{{ asset('css/mapbox-gl.css') }}">
         <link rel="stylesheet" href="{{ asset('css/peta.css') }}">
+        
     @endif
 
     <!-- Style Mandiri Modification CSS -->
@@ -53,26 +82,33 @@
         <link rel="stylesheet" href="{{ asset('front/css/mandiri-keyboard.css') }}">
     @endif
 
-    @stack('css')
+    <!-- TEMAKU: tampilan selaras tema utama, mode gelap, alat aksesibilitas. Dimuat paling akhir agar menang atas CSS lain. -->
+    <link rel="stylesheet" href="{{ asset('css/mandiri-temaku.css') }}">
 
-    {{-- Tambahan tema Samudra: muat tampilan Layanan Mandiri dari tema aktif bila tema menyediakannya. --}}
-    {{-- Baris ini akan hilang saat OpenSID diperbarui; pasang ulang bila perlu (lihat catatan_rilis.md tema Samudra). --}}
-    @php
-        try {
-            theme_active();
-            if (view()->exists('theme::partials.layanan_mandiri')) {
-                echo view('theme::partials.layanan_mandiri')->render();
-            }
-        } catch (\Throwable $e) {
-            // Tema aktif tidak menyediakan tampilan Layanan Mandiri: pakai tampilan bawaan.
-        }
-    @endphp
+    @stack('css')
 </head>
 
-<body class="hold-transition skin-blue fixed layout-top-nav">
+{{-- TEMAKU: class "fixed" dihapus. Header kini ikut mengalir bersama halaman, jadi tidak menimpa konten
+     dan tingginya bebas diatur (strip atas + bilah menu). --}}
+<body class="hold-transition skin-blue layout-top-nav">
+    <a href="#konten-utama" class="tk-skip">Langsung ke isi halaman</a>
     <div class="wrapper">
         <header class="main-header">
-            <nav class="navbar navbar-static-top">
+            {{-- TEMAKU: strip atas gelap seperti tema utama --}}
+            <div class="tk-strip">
+                <div class="container">
+                    <div class="tk-strip-kiri">
+                        <span class="hidden-xs">Tampilan:</span>
+                        <button type="button" id="tema-toggle" class="tk-strip-btn" aria-pressed="false" title="Ganti mode gelap / terang" aria-label="Ganti mode gelap atau terang">
+                            <i class="fa fa-moon-o" data-tema-ikon aria-hidden="true"></i>
+                            <span data-tema-label>Mode Gelap</span>
+                        </button>
+                    </div>
+                    <a class="tk-strip-link" href="{{ site_url() }}"><i class="fa fa-home" aria-hidden="true"></i> Beranda Website</a>
+                </div>
+            </div>
+
+            <nav class="navbar navbar-static-top" aria-label="Menu utama layanan mandiri">
                 <div class="container">
                     <div class="navbar-header">
                         <a class="navbar-brand" href="{{ site_url() }}">
@@ -81,24 +117,45 @@
                         <div class="navbar-brand">
                             {{ ucwords(setting('sebutan_desa') . ' ' . $desa['nama_desa']) }}
                         </div>
-                        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse" aria-expanded="false">
+                        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse" aria-expanded="false" aria-controls="navbar-collapse" aria-label="Buka menu">
                             <i class="fa fa-bars"></i>
                         </button>
                     </div>
 
                     <div class="collapse navbar-collapse pull-left" id="navbar-collapse">
                         <ul class="nav navbar-nav">
-                            <li><a href="{{ site_url('layanan-mandiri/profil') }}">Profil</a></li>
-                            <li><a href="{{ site_url('layanan-mandiri/permohonan-surat') }}">Surat</a></li>
-                            <li><a href="{{ site_url('layanan-mandiri/pesan-masuk') }}">Pesan</a></li>
-                            <li><a href="{{ site_url('layanan-mandiri/lapak') }}">Lapak</a></li>
-                            <li><a href="{{ site_url('layanan-mandiri/bantuan') }}">Bantuan</a></li>
-                            <li><a href="{{ site_url('layanan-mandiri/kehadiran') }}">Perangkat</a></li>
+                            {{-- KELOMPOK 1: NAVIGASI UTAMA --}}
+                            <li class="dropdown-header text-bold visible-xs" style="padding: 12px 15px 4px 15px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8;">Navigasi Utama</li>
+                            <!-- <li><a href="{{ site_url('layanan-mandiri/profil') }}"><i class="fa fa-user-circle-o"></i> Beranda / Profil</a></li> -->
+                            <li><a href="{{ site_url('layanan-mandiri/permohonan-surat') }}"><i class="fa fa-file-word-o"></i> Surat</a></li>
+                            <li><a href="{{ site_url('layanan-mandiri/pesan-masuk') }}"><i class="fa fa-envelope-o"></i> Pesan</a></li>
+                            <li><a href="{{ site_url('layanan-mandiri/lapak') }}"><i class="fa fa-cart-plus"></i> Lapak</a></li>
+                            <!-- <li><a href="{{ site_url('layanan-mandiri/bantuan') }}"><i class="fa fa-handshake-o"></i> Bantuan</a></li> -->
+                            <li><a href="{{ site_url('layanan-mandiri/kehadiran') }}"><i class="fa fa-users"></i> Perangkat</a></li>
+
+                            {{-- KELOMPOK 2: LAYANAN & AKUN --}}
+                            <li class="dropdown-header text-bold visible-xs" style="padding: 16px 15px 4px 15px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #94a3b8; border-top: 1px solid rgba(0,0,0,0.06); margin-top: 6px;">Menu Akun & Layanan</li>
+                            <li class="visible-xs"><a href="{{ ci_route('layanan-mandiri/profil') }}"><i class="fa fa-user-o"></i> Profil Warga</a></li>
+                            <li class="visible-xs"><a href="{{ ci_route('layanan-mandiri/produk') }}"><i class="fa fa-shopping-bag"></i> Produk Desa</a></li>
+                            <li class="visible-xs"><a href="{{ ci_route('layanan-mandiri/dokumen') }}"><i class="fa fa-file-text-o"></i> Dokumen Penduduk</a></li>
+                            <li class="visible-xs"><a href="{{ ci_route('layanan-mandiri/bantuan') }}"><i class="fa fa-life-ring"></i> Bantuan Sosial</a></li>
+                            <li class="visible-xs"><a href="{{ ci_route('layanan-mandiri/cetak-biodata') }}"><i class="fa fa-print"></i> Cetak Biodata</a></li>
+                            @if ($ci->is_login->id_kk != null)
+                                <li class="visible-xs"><a href="{{ ci_route('layanan-mandiri/cetak-kk') }}"><i class="fa fa-print"></i> Cetak Salinan KK</a></li>
+                            @endif
+                            <li class="visible-xs"><a href="{{ ci_route('layanan-mandiri/ganti-pin') }}"><i class="fa fa-key"></i> Ganti PIN</a></li>
+                            <li class="visible-xs"><a href="{{ ci_route('layanan-mandiri/verifikasi') }}"><i class="fa fa-check-square-o"></i> Verifikasi Akun</a></li>
+                            <li class="visible-xs tk-mobile-logout-wrap">
+                                <a href="{{ site_url('layanan-mandiri/keluar') }}" class="tk-mobile-logout-btn">
+                                    <i class="fa fa-sign-out"></i>
+                                    <span>Keluar dari Layanan</span>
+                                </a>
+                            </li>
                         </ul>
                     </div>
                     <div class="navbar-custom-menu">
                         <ul class="nav navbar-nav">
-                            <li>
+                            <!-- <li>
                                 <a href="{{ site_url('layanan-mandiri/permohonan-surat') }}" title="Permohonan Surat">
                                     <i class="fa fa-file-word-o"></i>
                                     <span class="label label-danger" id="b_surat" title="Surat perlu perhatian" style="display: none;"></span>
@@ -110,7 +167,7 @@
                                     <i class="fa fa-envelope-o"></i>
                                     <span class="label label-danger" id="b_pesan" style="display: none;"></span>
                                 </a>
-                            </li>
+                            </li> -->
 
                             <li class="dropdown user user-menu">
                                 <a href="#" class="dropdown-toggle" data-toggle="dropdown">
@@ -139,9 +196,10 @@
             </nav>
         </header>
 
-        <div class="content-wrapper" style="background: #ecf0f5;">
+        {{-- TEMAKU: style inline background #ecf0f5 dihapus; warna latar kini diatur mandiri-temaku.css --}}
+        <div class="content-wrapper">
             <div class="container">
-                <section class="content-header fixed">
+                <!-- <section class="content-header fixed">
                     <div class="row hidden-xs">
                         <a href="{{ site_url('layanan-mandiri/permohonan-surat') }}">
                             <div class="col-md-3 col-sm-6 col-xs-12">
@@ -184,48 +242,64 @@
                             </div>
                         </a>
                     </div>
-                </section>
+                </section> -->
 
-                <section class="content">
+                <section class="content" id="konten-utama" tabindex="-1">
                     <div class="row">
                         <div class="col-md-3">
-                            <div class="box box-solid">
-                                <div class="box-body box-line">
-                                    <img class="img-circle" src="{{ AmbilFoto($ci->is_login->foto, '', $ci->is_login->sex) }}" alt="Foto" width="100%">
+                            {{-- TEMAKU: kartu profil (foto besar + nama + NIK) dan menu berkelompok. Tautan dan logika ganti_pin sama seperti aslinya. --}}
+                            <div class="box box-solid tk-menu" role="navigation" aria-label="Menu layanan mandiri">
+                                <div class="box-body box-line tk-menu-profil">
+                                    <img class="img-circle tk-menu-foto" src="{{ AmbilFoto($ci->is_login->foto, '', $ci->is_login->sex) }}" alt="Foto {{ $ci->is_login->nama }}">
+                                    <div class="tk-menu-info">
+                                        <div class="tk-menu-nama">{{ $ci->is_login->nama }}</div>
+                                        <div class="tk-menu-nik">NIK: {{ $ci->is_login->nik }}</div>
+                                    </div>
                                 </div>
-                                <div class="box-body">
-                                    @if (cek_anjungan())
-                                        @include('admin.layouts.components.tombol_kembali_layanan_mandiri', ['url' => $ci->is_login->ganti_pin === '1' ? '#' : site_url('layanan-mandiri'), 'label' => 'Anjungan'])
-                                    @endif
-                                    <a href="{{ $ci->is_login->ganti_pin === '1' ? '#' : site_url('layanan-mandiri/profil') }}" class="btn btn-block btn-social bg-blue">
-                                        <i class="fa fa-user-o"></i> Profil
-                                    </a>
-                                    <a href="{{ $ci->is_login->ganti_pin === '1' ? '#' : site_url('layanan-mandiri/produk') }}" class="btn btn-block btn-social bg-blue">
-                                        <i class="fa fa-cart-plus"></i> Produk
-                                    </a>
-                                    <a href="{{ $ci->is_login->ganti_pin === '1' ? '#' : site_url('layanan-mandiri/cetak-biodata') }}" class="btn btn-block btn-social bg-green" target="_blank" rel="noopener noreferrer">
-                                        <i class="fa fa-print"></i> Cetak Biodata
-                                    </a>
-                                    @if ($ci->is_login->id_kk != null)
-                                        <a href="{{ $ci->is_login->ganti_pin === '1' ? '#' : site_url('layanan-mandiri/cetak-kk') }}" class="btn btn-block btn-social bg-green" target="_blank" rel="noopener noreferrer">
-                                            <i class="fa fa-print"></i> Cetak Salinan KK
+                                <div class="box-body tk-menu-isi">
+                                    <div class="tk-menu-grup">
+                                        <div class="tk-menu-judul">Layanan</div>
+                                        @if (cek_anjungan())
+                                            @include('admin.layouts.components.tombol_kembali_layanan_mandiri', ['url' => $ci->is_login->ganti_pin === '1' ? '#' : site_url('layanan-mandiri'), 'label' => 'Anjungan'])
+                                        @endif
+                                        <a href="{{ $ci->is_login->ganti_pin === '1' ? '#' : site_url('layanan-mandiri/profil') }}" class="btn btn-block btn-social bg-blue">
+                                            <i class="fa fa-user-o"></i> Profil
                                         </a>
-                                    @endif
-                                    <a href="{{ $ci->is_login->ganti_pin === '1' ? '#' : site_url('layanan-mandiri/dokumen') }}" class="btn btn-block btn-social bg-aqua">
-                                        <i class="fa fa-file"></i> Dokumen
-                                    </a>
-                                    <a href="{{ $ci->is_login->ganti_pin === '1' ? '#' : site_url('layanan-mandiri/bantuan') }}" class="btn btn-block btn-social bg-aqua">
-                                        <i class="fa fa-handshake-o"></i> Bantuan
-                                    </a>
-                                    <a href="{{ site_url('layanan-mandiri/ganti-pin') }}" class="btn btn-block btn-social bg-navy">
-                                        <i class="fa fa-key"></i> Ganti Password
-                                    </a>
-                                    <a href="{{ $ci->is_login->ganti_pin === '1' ? '#' : site_url('layanan-mandiri/verifikasi') }}" class="btn btn-block btn-social bg-purple">
-                                        <i class="fa fa-key"></i> Verifikasi
-                                    </a>
-                                    <button type="button" class="btn btn-block btn-social bg-red" data-toggle="modal" data-target="#pendapat">
-                                        <i class="fa fa-sign-out"></i>Keluar
-                                    </button>
+                                        <a href="{{ $ci->is_login->ganti_pin === '1' ? '#' : site_url('layanan-mandiri/produk') }}" class="btn btn-block btn-social bg-blue">
+                                            <i class="fa fa-cart-plus"></i> Produk
+                                        </a>
+                                        <a href="{{ $ci->is_login->ganti_pin === '1' ? '#' : site_url('layanan-mandiri/dokumen') }}" class="btn btn-block btn-social bg-aqua">
+                                            <i class="fa fa-file"></i> Dokumen
+                                        </a>
+                                        <a href="{{ $ci->is_login->ganti_pin === '1' ? '#' : site_url('layanan-mandiri/bantuan') }}" class="btn btn-block btn-social bg-aqua">
+                                            <i class="fa fa-handshake-o"></i> Bantuan
+                                        </a>
+                                    </div>
+
+                                    <div class="tk-menu-grup">
+                                        <div class="tk-menu-judul">Cetak</div>
+                                        <a href="{{ $ci->is_login->ganti_pin === '1' ? '#' : site_url('layanan-mandiri/cetak-biodata') }}" class="btn btn-block btn-social bg-green" target="_blank" rel="noopener noreferrer">
+                                            <i class="fa fa-print"></i> Cetak Biodata
+                                        </a>
+                                        @if ($ci->is_login->id_kk != null)
+                                            <a href="{{ $ci->is_login->ganti_pin === '1' ? '#' : site_url('layanan-mandiri/cetak-kk') }}" class="btn btn-block btn-social bg-green" target="_blank" rel="noopener noreferrer">
+                                                <i class="fa fa-print"></i> Cetak Salinan KK
+                                            </a>
+                                        @endif
+                                    </div>
+
+                                    <div class="tk-menu-grup">
+                                        <div class="tk-menu-judul">Akun</div>
+                                        <a href="{{ site_url('layanan-mandiri/ganti-pin') }}" class="btn btn-block btn-social bg-navy">
+                                            <i class="fa fa-key"></i> Ganti PIN
+                                        </a>
+                                        <a href="{{ $ci->is_login->ganti_pin === '1' ? '#' : site_url('layanan-mandiri/verifikasi') }}" class="btn btn-block btn-social bg-purple">
+                                            <i class="fa fa-key"></i> Verifikasi
+                                        </a>
+                                        <button type="button" class="btn btn-block btn-social bg-red" data-toggle="modal" data-target="#pendapat">
+                                            <i class="fa fa-sign-out"></i>Keluar
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -234,7 +308,7 @@
                             @yield('content')
 
                             @includeWhen($ci->is_login->ganti_pin === '1' && $ci->uri->segment(2) != 'ganti-pin', 'layanan_mandiri.layouts.components.notif', [
-                                'pesan' => 'Selamat datang pengguna layanan mandiri <b> ' . ucwords(setting('sebutan_desa') . ' ' . $desa['nama_desa']) . ' </b>, <br>Untuk keamanan akun anda, silakan ganti <b>Password</b> Anda terlebih dahulu sebelum melanjutkan menggunakan layanan mandiri.',
+                                'pesan' => 'Selamat datang pengguna layanan mandiri <b> ' . ucwords(setting('sebutan_desa') . ' ' . $desa['nama_desa']) . ' </b>, <br>Untuk keamanan akun anda, silakan ganti <b>PIN</b> Anda terlebih dahulu sebelum melanjutkan menggunakan layanan mandiri.',
                                 'aksi' => site_url('layanan-mandiri/ganti-pin'),
                             ])
 
@@ -255,6 +329,74 @@
             </div>
         </footer>
     </div>
+
+    {{-- TEMAKU: Alat Aksesibilitas (tombol mengambang di tepi kanan). Perilaku: mandiri-temaku.js, gaya: mandiri-temaku.css --}}
+    <div id="a11y-widget" class="a11y-widget">
+        <button type="button" id="a11y-fab" class="a11y-fab" aria-expanded="false" aria-controls="a11y-panel" aria-label="Buka Alat Aksesibilitas" title="Alat Aksesibilitas">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true" focusable="false">
+                <path d="M12 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm8 6.5v1.8c0 .5-.4.9-.9.9-2.2.1-4.1.4-5.1.7V22h-2v-5h-2v5H8V12c-1-.3-2.9-.6-5.1-.7-.5 0-.9-.4-.9-.9V8.5c0-.6.5-1 1.1-.9 2.7.3 5.2.5 8.9.5s6.2-.2 8.9-.5c.6-.1 1.1.3 1.1.9z" />
+            </svg>
+        </button>
+
+        <div id="a11y-panel" class="a11y-panel" role="dialog" aria-label="Alat Aksesibilitas" hidden>
+            <div class="a11y-head">
+                <strong>Alat Aksesibilitas</strong>
+                <button type="button" class="a11y-close" data-a11y="tutup" aria-label="Tutup Alat Aksesibilitas">&times;</button>
+            </div>
+            <ul class="a11y-list">
+                <!-- <li>
+                    <button type="button" class="a11y-item" data-a11y="plus">
+                        <span class="a11y-ico" aria-hidden="true">A+</span>
+                        <span class="a11y-txt">Perbesar Teks</span>
+                        <span class="a11y-val" data-a11y-ukuran>100%</span>
+                    </button>
+                </li>
+                <li>
+                    <button type="button" class="a11y-item" data-a11y="minus">
+                        <span class="a11y-ico" aria-hidden="true">A&minus;</span>
+                        <span class="a11y-txt">Perkecil Teks</span>
+                    </button>
+                </li> -->
+                <li>
+                    <button type="button" class="a11y-item" data-a11y="gray" aria-pressed="false">
+                        <span class="a11y-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9" /><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none" /></svg></span>
+                        <span class="a11y-txt">Skala Abu-abu</span>
+                        <span class="a11y-sw" aria-hidden="true"></span>
+                    </button>
+                </li>
+                <li>
+                    <button type="button" class="a11y-item" data-a11y="neg" aria-pressed="false">
+                        <span class="a11y-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3" /><path d="M3 3h18v18z" fill="currentColor" stroke="none" /></svg></span>
+                        <span class="a11y-txt">Kontras Negatif</span>
+                        <span class="a11y-sw" aria-hidden="true"></span>
+                    </button>
+                </li>
+                <li>
+                    <button type="button" class="a11y-item" data-a11y="underline" aria-pressed="false">
+                        <span class="a11y-ico" aria-hidden="true"><span style="text-decoration:underline">U</span></span>
+                        <span class="a11y-txt">Garis Bawah Tautan</span>
+                        <span class="a11y-sw" aria-hidden="true"></span>
+                    </button>
+                </li>
+                <li>
+                    <button type="button" class="a11y-item" data-a11y="tts" aria-pressed="false">
+                        <span class="a11y-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 9v6h4l5 4V5L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4.03v8.06A4.5 4.5 0 0 0 16.5 12zM14 3.23v2.06a7 7 0 0 1 0 13.42v2.06a9 9 0 0 0 0-17.54z" /></svg></span>
+                        <span class="a11y-txt">Teks ke Suara</span>
+                        <span class="a11y-sw" aria-hidden="true"></span>
+                    </button>
+                    <p class="a11y-help" data-a11y-tts-bantuan hidden>Blok teks, atau klik paragraf atau judul, untuk mendengarkan.</p>
+                </li>
+                <li>
+                    <button type="button" class="a11y-item a11y-reset" data-a11y="reset">
+                        <span class="a11y-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z" /></svg></span>
+                        <span class="a11y-txt">Atur Ulang</span>
+                    </button>
+                </li>
+            </ul>
+        </div>
+        <div id="a11y-live" class="a11y-sr" aria-live="polite" role="status"></div>
+    </div>
+
     <!-- Diperlukan untuk global automatic base_url oleh external js file -->
     <script type="text/javascript">
         const BASE_URL = "{{ base_url() }}";
@@ -311,6 +453,10 @@
         <script src="{{ asset('js/jquery.keyboard.extension-all.min.js') }}"></script>
         <script src="{{ asset('front/js/mandiri-keyboard.js') }}"></script>
     @endif
+
+    <!-- TEMAKU: mode gelap/terang + alat aksesibilitas -->
+    <script src="{{ asset('js/mandiri-temaku.js') }}"></script>
+
     <script type="text/javascript">
         $(window).on('load', function() {
             $('#notif').modal('show');

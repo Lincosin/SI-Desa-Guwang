@@ -1,6 +1,42 @@
 @extends('layanan_mandiri.layouts.index')
 
 @section('content')
+    <link rel="stylesheet" href="{{ asset('css/mandiri-animasi.css') }}">
+    <style>
+        #tabeldata td.aksi a.bg-blue,
+        #tabeldata td.aksi a[title*="Unduh"],
+        #tabeldata td.aksi a[title*="Cetak"],
+        #tabeldata td.aksi a:has(.fa-download),
+        #tabeldata td.aksi a:has(.fa-file-pdf-o) {
+            display: none !important;
+        }
+
+        #pdf-preview-container {
+            width: 100%;
+            height: 75vh;
+            overflow-y: auto;
+            background-color: #334155;
+            padding: 20px 10px;
+            text-align: center;
+        }
+
+        #pdf-preview-container canvas {
+            display: block;
+            margin: 0 auto 16px auto;
+            max-width: 100%;
+            height: auto !important;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            border-radius: 4px;
+            background-color: #ffffff;
+        }
+
+        .pdf-loading-state {
+            color: #f8fafc;
+            padding: 60px 20px;
+            font-size: 15px;
+        }
+    </style>
+
     <div class="box box-solid">
         <div class="box-header with-border bg-green">
             <h4 class="box-title">Surat</h4>
@@ -28,7 +64,7 @@
                             <th>Aksi</th>
                             <th>Nomor Surat</th>
                             <th>Jenis Surat</th>
-                            <th>Ditandatangani Oleh</th>
+                            <th>Keterangan</th>
                             <th>Tanggal</th>
                         </tr>
                     </thead>
@@ -38,7 +74,7 @@
             </div>
         </div>
     </div>
-    {{-- KUSTOM lihat surat: pratinjau surat yang sudah jadi --}}
+
     <div class="modal fade" id="modal-lihat-surat" tabindex="-1" role="dialog">
         <div class="modal-dialog modal-lg" role="document" style="width: 95%; max-width: 1000px;">
             <div class="modal-content">
@@ -47,10 +83,15 @@
                     <h4 class="modal-title">Lihat Surat</h4>
                 </div>
                 <div class="modal-body" style="padding: 0;">
-                    <iframe src="about:blank" style="display: block; width: 100%; height: 75vh; border: 0;" title="Pratinjau surat"></iframe>
+                    <div id="pdf-preview-container">
+                        <div class="pdf-loading-state">
+                            <i class="fa fa-spinner fa-spin fa-2x"></i>
+                            <p style="margin-top: 10px;">Memuat pratinjau dokumen...</p>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
-                    <a href="#" class="btn btn-social bg-fuchsia btn-sm unduh-surat" download><i class="fa fa-download"></i>Unduh PDF</a>
+                    <a href="#" class="btn btn-social bg-blue btn-sm unduh-surat" download><i class="fa fa-download"></i>Unduh PDF</a>
                     <button type="button" class="btn btn-default btn-sm" data-dismiss="modal">Tutup</button>
                 </div>
             </div>
@@ -59,7 +100,10 @@
 @endsection
 
 @push('scripts')
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
         $(document).ready(function() {
             var isTte = "{{ setting('tte') }}";
             var tabelData = $('#tabeldata').DataTable({
@@ -78,7 +122,8 @@
                         'targets': [0, 1]
                     }
                 ],
-                'columns': [{
+                'columns': [
+                    {
                         data: 'DT_RowIndex',
                         class: 'padat',
                     },
@@ -89,50 +134,127 @@
                     {
                         data: 'no_surat',
                         class: 'padat',
+                        defaultContent: '-',
                     },
                     {
                         data: null,
                         render: function(data) {
-                            return data?.format_surat?.nama ?? ''
+                            return data?.format_surat?.nama ?? '-';
                         },
                         name: 'formatSurat.nama',
                     },
                     {
-                        data: 'nama_pamong',
-                        class: 'padat'
+                        data: 'surat.nama',
+                        name: 'surat.nama',
+                        defaultContent: '-',
+                    },
+                    {
+                        data: 'keterangan',
+                        name: 'keterangan', // Wajib ada untuk server-side
+                        defaultContent: '-', // Mencegah error pop-up DataTables
                     },
                     {
                         data: 'tanggal',
                         class: 'padat',
                     },
                 ],
+                'drawCallback': function() {
+                    // Mengambil judul dari thead untuk dijadikan label di tampilan Mobile Card
+                    var headers = [];
+                    $(this).find('thead th').each(function() {
+                        headers.push($(this).text().trim());
+                    });
+
+                    // Menyematkan judul tersebut ke dalam masing-masing sel (td)
+                    $(this).find('tbody tr').each(function() {
+                        $(this).find('td').each(function(index) {
+                            if (headers[index]) {
+                                $(this).attr('data-label', headers[index]);
+                            }
+                        });
+                        
+                        // Bersihkan tombol unduh seperti biasa agar tidak tumpang tindih
+                        var $tdAksi = $(this).find('td.aksi');
+                        var btnUnduhTabel = $tdAksi.find('.fa-download, .fa-file-pdf-o').closest('a, button');
+                        var btnLihat = $tdAksi.find('a.lihat-surat');
+
+                        if (btnUnduhTabel.length && btnLihat.length) {
+                            btnLihat.attr('data-unduh', btnUnduhTabel.attr('href'));
+                        }
+                        btnUnduhTabel.remove();
+                    });
+                }
             });
 
             $('button.keterangan').click(function(event) {
                 $(this).popover('show');
             });
 
-            // KUSTOM lihat surat: tampilkan surat yang sudah jadi di jendela pratinjau; di layar kecil dibuka di tab baru.
-            // Modal dipindah ke body agar tidak terkurung efek CSS (blur/transform) pembungkus konten tema.
+            function renderPdfToCanvas(url, container) {
+                container.html('<div class="pdf-loading-state"><i class="fa fa-spinner fa-spin fa-2x"></i><p style="margin-top: 10px;">Memuat pratinjau dokumen...</p></div>');
+
+                fetch(url, {
+                    credentials: 'same-origin',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('Gagal mengambil dokumen (Status: ' + response.status + ')');
+                    }
+                    return response.arrayBuffer();
+                })
+                .then(function(arrayBuffer) {
+                    return pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                })
+                .then(function(pdf) {
+                    container.empty();
+                    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                        pdf.getPage(pageNum).then(function(page) {
+                            var scale = 1.4;
+                            var viewport = page.getViewport({ scale: scale });
+                            var canvas = document.createElement('canvas');
+                            var context = canvas.getContext('2d');
+                            canvas.height = viewport.height;
+                            canvas.width = viewport.width;
+                            container.append(canvas);
+
+                            page.render({
+                                canvasContext: context,
+                                viewport: viewport
+                            });
+                        });
+                    }
+                })
+                .catch(function(error) {
+                    console.error('PDF Preview Error:', error);
+                    container.html(
+                        '<div class="pdf-loading-state">' +
+                        '<i class="fa fa-exclamation-circle fa-2x" style="color: #f87171;"></i>' +
+                        '<p style="margin-top: 10px;">Pratinjau diblokir oleh ekstensi unduhan browser Anda.<br>Silakan klik tombol <b>Unduh PDF</b> di pojok kanan bawah untuk membuka surat.</p>' +
+                        '</div>'
+                    );
+                });
+            }
+
             $('#modal-lihat-surat').appendTo('body');
             $('#tabeldata').on('click', 'a.lihat-surat', function(e) {
-                if (window.innerWidth < 768) {
-                    return;
-                }
                 e.preventDefault();
-                var url = $(this).attr('href');
+                var urlPreview = $(this).attr('href');
+                var urlUnduh = $(this).attr('data-unduh') || urlPreview;
+
                 var modal = $('#modal-lihat-surat');
+                var container = $('#pdf-preview-container');
+
                 modal.find('.modal-title').text($(this).data('judul') || 'Lihat Surat');
-                modal.find('iframe').attr('src', url);
-                modal.find('.unduh-surat').attr('href', url);
+                modal.find('.unduh-surat').attr('href', urlUnduh);
                 modal.modal('show');
+
+                renderPdfToCanvas(urlPreview, container);
             });
 
             $('#modal-lihat-surat').on('hidden.bs.modal', function() {
-                $(this).find('iframe').attr('src', 'about:blank');
+                $('#pdf-preview-container').empty();
             });
-
-            // KUSTOM lihat surat: kolom Aksi tetap tampil walau TTE nonaktif, karena berisi tombol Lihat/Unduh surat
         });
     </script>
 @endpush

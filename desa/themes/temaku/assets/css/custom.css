@@ -1,0 +1,64 @@
+:root {
+  /* Palet dari logo desa: biru #3B94D1, hitam, putih */
+  --primary-base-color: #006496;
+  --primary-darken-color: #004B72;
+  --secondary-base-color: #53606C;
+  --secondary-darken-color: #3B4854;
+  --accent-base-color: #3B94D1;
+  --accent-darken-color: #006496;
+}
+
+/* ===== Tema temaku: gaya isi artikel (pengganti tipografi Tailwind) ===== */
+.artikel-isi > * + * { margin-top: 1.1em; }
+.artikel-isi h2 { font-size: 1.5em; font-weight: 700; line-height: 1.3; margin-top: 1.6em; }
+.artikel-isi h3 { font-size: 1.25em; font-weight: 700; line-height: 1.35; margin-top: 1.4em; }
+.artikel-isi h4 { font-size: 1.1em; font-weight: 700; margin-top: 1.2em; }
+.artikel-isi a { color: var(--primary-base-color); text-decoration: underline; }
+.artikel-isi ul { list-style: disc; padding-left: 1.5em; }
+.artikel-isi ol { list-style: decimal; padding-left: 1.5em; }
+.artikel-isi li + li { margin-top: .35em; }
+.artikel-isi img { max-width: 100%; height: auto; border-radius: 1rem; }
+.artikel-isi blockquote { border-left: 4px solid var(--primary-base-color); padding: .75em 1.1em; background: rgba(0,0,0,.04); border-radius: 0 .75rem .75rem 0; font-style: italic; }
+.artikel-isi table { width: 100%; border-collapse: collapse; display: block; overflow-x: auto; }
+.artikel-isi th, .artikel-isi td { border: 1px solid rgba(0,0,0,.15); padding: .5em .75em; }
+.artikel-isi iframe, .artikel-isi video { max-width: 100%; }
+
+/* ===== Animasi muncul saat scroll (beranda) =====
+  Kelas .reveal      : bagian naik pelan sambil memudar masuk
+  Kelas .reveal-stagger : anak-anaknya (kartu) muncul bergiliran
+  Mengubah gaya: sesuaikan durasi (.7s / .6s), jarak (translateY) dan jeda (90ms) di bawah ini. */
+.js-reveal .reveal:not(.is-visible),
+.js-reveal .reveal-stagger:not(.is-visible) > * { opacity: 0; }
+
+.js-reveal .reveal.is-visible {
+  animation: reveal-up .7s cubic-bezier(.2, .7, .2, 1) backwards;
+}
+.js-reveal .reveal-stagger.is-visible > * {
+  animation: reveal-pop .6s cubic-bezier(.2, .7, .2, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 90ms);
+}
+
+@keyframes reveal-up {
+  from { opacity: 0; transform: translateY(32px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes reveal-pop {
+  from { opacity: 0; transform: translateY(24px) scale(.94); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .js-reveal .reveal:not(.is-visible),
+  .js-reveal .reveal-stagger:not(.is-visible) > * { opacity: 1; }
+  .js-reveal .reveal.is-visible,
+  .js-reveal .reveal-stagger.is-visible > * { animation: none; }
+}
+
+/* Hover tautan */
+a.hover\:underline:hover:has(> span:not(.material-symbols-outlined)) {
+  text-decoration: none;
+}
+a.hover\:underline:hover > span:not(.material-symbols-outlined) {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}

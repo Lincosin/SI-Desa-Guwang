@@ -81,8 +81,7 @@ class NewPasswordController extends MY_Controller
         $this->validated($request, [
             'token'              => ['required'],
             $this->via($request) => ['required'],
-            // KUSTOM pendaftaran-mandiri: password bebas (min. 6 karakter), bukan PIN 6 angka
-            'pin'                => ['required', 'string', 'min:6', 'max:50', 'confirmed'],
+            'pin'                => ['required', 'digits:6', 'regex:/^\d{6}$/', 'confirmed'],
         ]);
 
         // Here we will attempt to reset the user's password. If it is successful we

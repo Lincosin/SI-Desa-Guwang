@@ -3,7 +3,7 @@
 @section('content')
     <div class="box box-solid">
         <div class="box-header with-border bg-navy">
-            <h4 class="box-title">Ganti Password</h4>
+            <h4 class="box-title">Ganti PIN</h4>
         </div>
         <div class="box-body">
             <div class="row">
@@ -11,7 +11,6 @@
                 <div class="col-md-6 col-sm-6 col-xs-12">
                     <form action="{{ $form_action }}" method="POST" id="validasi">
                         <div class="box-body">
-                            {{-- KUSTOM pendaftaran-mandiri: PIN 6 angka diganti password --}}
                             @php $gagal = $data = session('notif'); @endphp
                             @if ($data['status'] == -1)
                                 <div class="callout callout-danger">
@@ -22,47 +21,47 @@
                             @includeWhen($data['status'] == 1, 'layanan_mandiri.layouts.components.notif', $data)
 
                             <div class="form-group">
-                                <label for="pin_lama">Password Lama</label>
+                                <label for="pin_lama">PIN Lama</label>
                                 <div class="input-group">
                                     <input
                                         type="password"
-                                        class="form-control input-md pin required {{ $cek_anjungan['keyboard'] == 1 ? 'kbvtext' : '' }}"
+                                        class="form-control input-md bilangan pin required {{ $cek_anjungan['keyboard'] == 1 ? 'kbvnumber' : '' }}"
                                         name="pin_lama"
-                                        placeholder="Masukkan Password Lama"
+                                        placeholder="Masukkan PIN Lama"
                                         minlength="6"
-                                        maxlength="50"
+                                        maxlength="6"
                                         autocomplete="off"
                                     >
                                     <span class="input-group-addon"><i class="fa fa-eye-slash" id="lama" onclick="show(this);" aria-hidden="true"></i></span>
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label for="pin_baru1">Password Baru</label>
+                                <label for="pin_baru1">PIN Baru</label>
                                 <div class="input-group">
                                     <input
                                         type="password"
-                                        class="form-control input-md pin required {{ $cek_anjungan['keyboard'] == 1 ? 'kbvtext' : '' }}"
+                                        class="form-control input-md bilangan pin required {{ $cek_anjungan['keyboard'] == 1 ? 'kbvnumber' : '' }}"
                                         name="pin_baru1"
                                         id="pin_baru1"
-                                        placeholder="Minimal 6 karakter (huruf, angka, atau simbol)"
+                                        placeholder="Masukkan PIN Baru"
                                         minlength="6"
-                                        maxlength="50"
+                                        maxlength="6"
                                         autocomplete="off"
                                     >
                                     <span class="input-group-addon"><i class="fa fa-eye-slash" id="baru1" onclick="show(this);" aria-hidden="true"></i></span>
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label for="pin_baru2">Konfirmasi Password Baru</label>
+                                <label for="pin_baru2">Konfirmasi PIN Baru</label>
                                 <div class="input-group">
                                     <input
                                         type="password"
-                                        class="form-control input-md pin required {{ $cek_anjungan['keyboard'] == 1 ? 'kbvtext' : '' }}"
+                                        class="form-control input-md bilangan pin required {{ $cek_anjungan['keyboard'] == 1 ? 'kbvnumber' : '' }}"
                                         name="pin_baru2"
                                         id="pin_baru2"
-                                        placeholder="Ketik ulang password baru"
+                                        placeholder="Masukkan Konfirmasi PIN Baru"
                                         minlength="6"
-                                        maxlength="50"
+                                        maxlength="6"
                                         autocomplete="off"
                                     >
                                     <span class="input-group-addon"><i class="fa fa-eye-slash" id="baru2" onclick="show(this);" aria-hidden="true"></i></span>
@@ -71,8 +70,8 @@
 
                             <div class="form-group">
                                 @if ($tgl_verifikasi_telegram || $tgl_verifikasi_email)
-                                    
-                                    <label style="margin-top: 10px; margin-bottom: 0px;">Kirim Password Baru Melalui : </label>
+                                    : ?>
+                                    <label style="margin-top: 10px; margin-bottom: 0px;">Kirim PIN Baru Melalui : </label>
                                 @endif
 
                                 @if ($tgl_verifikasi_email)

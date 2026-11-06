@@ -1,37 +1,42 @@
 @extends('layanan_mandiri.layouts.index')
 
-{{-- KUSTOM: gaya ringkasan dan tahapan surat --}}
-@push('css')
-    <style>
-        .ringkasan-surat .info-box { min-height: 64px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0, 0, 0, .12); }
-        .ringkasan-surat .info-box-icon { width: 64px; height: 64px; line-height: 64px; font-size: 28px; }
-        .ringkasan-surat .info-box-content { margin-left: 64px; padding: 8px 10px; }
-        .ringkasan-surat .info-box-text { white-space: normal; font-size: 12px; line-height: 1.3; }
-        .ringkasan-surat .info-box-number { font-size: 20px; }
-        .ringkasan-surat a.ringkasan-tautan, .ringkasan-surat a.ringkasan-tautan:hover { color: inherit !important; text-decoration: none; }
-        .tahapan-surat { min-width: 230px; }
-        .tahapan-surat ol { display: flex; list-style: none; margin: 0; padding: 0; }
-        .tahapan-surat li { flex: 1; position: relative; text-align: center; font-size: 11px; color: #999; }
-        .tahapan-surat li::before { content: ''; position: absolute; top: 11px; left: -50%; width: 100%; height: 2px; background: #ddd; }
-        .tahapan-surat li:first-child::before { display: none; }
-        .tahapan-surat .titik { position: relative; z-index: 1; display: inline-block; width: 22px; height: 22px; line-height: 22px; border-radius: 50%; background: #ddd; color: #fff; font-weight: bold; }
-        .tahapan-surat .label-tahap { display: block; margin-top: 3px; line-height: 1.2; }
-        .tahapan-surat li.selesai, .tahapan-surat li.aktif, .tahapan-surat li.perhatian { color: #333; }
-        .tahapan-surat li.selesai::before, .tahapan-surat li.aktif::before, .tahapan-surat li.perhatian::before { background: #00a65a; }
-        .tahapan-surat li.selesai .titik { background: #00a65a; }
-        .tahapan-surat li.aktif .titik { background: #3c8dbc; box-shadow: 0 0 0 3px rgba(60, 141, 188, .25); }
-        .tahapan-surat li.perhatian .titik { background: #f39c12; box-shadow: 0 0 0 3px rgba(243, 156, 18, .25); }
-        .tahapan-surat li.aktif .label-tahap, .tahapan-surat li.perhatian .label-tahap { font-weight: bold; }
-        .tahapan-catatan { margin-top: 6px; font-size: 12px; color: #555; }
-        /* KUSTOM permohonan dibatalkan */
-        .alasan-batal { font-size: 12px; padding: 6px 8px; background: #fdf1f0; border-left: 3px solid #dd4b39; border-radius: 2px; }
-        .alasan-batal-isi { margin-top: 3px; color: #333; white-space: normal; }
-        .filter-permohonan { margin-bottom: 10px; }
-    </style>
-@endpush
-
 @section('content')
-    @include('layanan_mandiri.layouts.components.notifikasi')
+    <link rel="stylesheet" href="{{ asset('css/mandiri-style.css') }}">
+    <style>
+        /* Sembunyikan tombol unduh (pink/ikon download) HANYA di dalam kolom Aksi tabel */
+        #tabeldata td.aksi a.bg-blue,
+        #tabeldata td.aksi a[title*="Unduh"],
+        #tabeldata td.aksi a:has(.fa-download) {
+            display: none !important;
+        }
+
+        /* Styling Container Pratinjau PDF Canvas */
+        #pdf-preview-container {
+            width: 100%;
+            height: 75vh;
+            overflow-y: auto;
+            background-color: #334155;
+            padding: 20px 10px;
+            text-align: center;
+        }
+
+        #pdf-preview-container canvas {
+            display: block;
+            margin: 0 auto 16px auto;
+            max-width: 100%;
+            height: auto !important;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            border-radius: 4px;
+            background-color: #ffffff;
+        }
+
+        .pdf-loading-state {
+            color: #f8fafc;
+            padding: 60px 20px;
+            font-size: 15px;
+        }
+    </style>
+
     <div class="box box-solid">
         <div class="box-header with-border bg-green">
             <h4 class="box-title">Surat</h4>
@@ -50,63 +55,7 @@
         <div class="box-body box-line">
             <h4><b>DAFTAR PERMOHONAN SURAT</b></h4>
         </div>
-        {{-- KUSTOM: ringkasan permohonan surat warga --}}
-        <div class="box-body box-line">
-            <div class="row ringkasan-surat">
-                <div class="col-xs-12 col-sm-4">
-                    <div class="info-box">
-                        <span class="info-box-icon bg-aqua"><i class="fa fa-hourglass-half"></i></span>
-                        <div class="info-box-content">
-                            <span class="info-box-text">Sedang Diproses</span>
-                            <span class="info-box-number">{{ $ringkasan['diproses'] }}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-xs-12 col-sm-4">
-                    <div class="info-box">
-                        <span class="info-box-icon bg-yellow"><i class="fa fa-pencil"></i></span>
-                        <div class="info-box-content">
-                            <span class="info-box-text">Perlu Dilengkapi</span>
-                            <span class="info-box-number">{{ $ringkasan['dilengkapi'] }}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-xs-12 col-sm-4">
-                    <a href="{{ ci_route('layanan-mandiri.arsip-surat') }}" class="ringkasan-tautan" title="Lihat di Arsip Surat">
-                        <div class="info-box">
-                            <span class="info-box-icon bg-green"><i class="fa fa-check-circle"></i></span>
-                            <div class="info-box-content">
-                                <span class="info-box-text">Selesai</span>
-                                <span class="info-box-number">{{ $ringkasan['selesai'] }}</span>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-            </div>
-            @if ($ringkasan['siap'] > 0)
-                <div class="callout callout-success" style="margin-bottom: 0;">
-                    <p><i class="fa fa-thumbs-o-up"></i> <b>{{ $ringkasan['siap'] }} surat</b> sudah disetujui {{ $sebutan_kades }}. Tekan <b>Lihat Surat</b> atau unduh suratnya, lalu tekan <b>Selesai</b> setelah surat Anda terima.</p>
-                </div>
-            @elseif ($ringkasan['dilengkapi'] > 0)
-                <div class="callout callout-warning" style="margin-bottom: 0;">
-                    <p><i class="fa fa-pencil"></i> <b>{{ $ringkasan['dilengkapi'] }} permohonan</b> perlu dilengkapi. Tekan <b>Lengkapi Surat</b> pada permohonan tersebut.</p>
-                </div>
-            @endif
-        </div>
         <div class="box-body">
-            {{-- KUSTOM permohonan dibatalkan: filter daftar --}}
-            <div class="filter-permohonan">
-                <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-sm btn-primary filter-tampil" data-tampil="aktif"><i class="fa fa-list"></i> Permohonan</button>
-                    <button type="button" class="btn btn-sm btn-default filter-tampil" data-tampil="dibatalkan"><i class="fa fa-times-circle"></i> Dibatalkan <span class="badge">{{ $ringkasan['dibatalkan'] }}</span></button>
-                </div>
-                @if ($ringkasan['dibatalkan'] > 0)
-                    {{-- KUSTOM hapus riwayat: hapus semua permohonan dibatalkan --}}
-                    <button type="button" class="btn btn-sm btn-danger hapus-dibatalkan hapus-semua-dibatalkan" style="display: none; margin-left: 5px;"
-                        data-url="{{ ci_route('layanan-mandiri.surat.hapus-dibatalkan') }}" data-semua="1"><i class="fa fa-trash-o"></i> Hapus Semua yang Dibatalkan</button>
-                @endif
-                <p class="text-muted small keterangan-filter" style="margin: 6px 0 0;">Permohonan yang dibatalkan otomatis disembunyikan dari daftar ini setelah {{ $hari_tampil_dibatalkan }} hari. Semua permohonan yang dibatalkan tetap bisa dilihat di <b>Dibatalkan</b>.</p>
-            </div>
             <div class="table-responsive">
                 <table class="table table-bordered table-hover table-data" id="tabeldata">
                     <thead>
@@ -115,7 +64,7 @@
                             <th>Aksi</th>
                             <th>No Antrean</th>
                             <th>Jenis Surat</th>
-                            <th>Tahapan</th>{{-- KUSTOM --}}
+                            <th>Status Permohonan</th>
                             <th>Tanggal Kirim</th>
                         </tr>
                     </thead>
@@ -125,7 +74,8 @@
             </div>
         </div>
     </div>
-    {{-- KUSTOM lihat surat: pratinjau surat yang sudah jadi --}}
+
+    {{-- KUSTOM lihat surat: pratinjau surat menggunakan Canvas PDF.js agar tidak putih / dicegat IDM --}}
     <div class="modal fade" id="modal-lihat-surat" tabindex="-1" role="dialog">
         <div class="modal-dialog modal-lg" role="document" style="width: 95%; max-width: 1000px;">
             <div class="modal-content">
@@ -134,79 +84,43 @@
                     <h4 class="modal-title">Lihat Surat</h4>
                 </div>
                 <div class="modal-body" style="padding: 0;">
-                    <iframe src="about:blank" style="display: block; width: 100%; height: 75vh; border: 0;" title="Pratinjau surat"></iframe>
+                    <div id="pdf-preview-container">
+                        <div class="pdf-loading-state">
+                            <i class="fa fa-spinner fa-spin fa-2x"></i>
+                            <p style="margin-top: 10px;">Memuat pratinjau dokumen...</p>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
-                    <a href="#" class="btn btn-social bg-fuchsia btn-sm unduh-surat" download><i class="fa fa-download"></i>Unduh PDF</a>
+                    <a href="#" class="btn btn-social bg-blue btn-sm unduh-surat" download><i class="fa fa-download"></i>Unduh PDF</a>
                     <button type="button" class="btn btn-default btn-sm" data-dismiss="modal">Tutup</button>
                 </div>
             </div>
         </div>
     </div>
-    {{-- KUSTOM hapus riwayat: konfirmasi hapus permohonan dibatalkan --}}
-    <div class="modal fade" id="modal-hapus-dibatalkan" tabindex="-1" role="dialog">
-        <div class="modal-dialog" role="document">
-            <form method="post" action="#" class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
-                    <h4 class="modal-title">Hapus Riwayat Permohonan</h4>
-                </div>
-                <div class="modal-body">
-                    <p class="pesan-hapus"></p>
-                    <p class="text-muted">Riwayat yang dihapus tidak bisa dikembalikan. Dokumen syarat di menu <b>Dokumen</b> tidak ikut terhapus.</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-default btn-sm" data-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-social btn-danger btn-sm"><i class="fa fa-trash-o"></i>Ya, Hapus</button>
-                </div>
-            </form>
-        </div>
-    </div>
-    {{-- KUSTOM: konfirmasi surat selesai --}}
-    <div class="modal fade" id="modal-selesai-surat" tabindex="-1" role="dialog">
-        <div class="modal-dialog" role="document">
-            <form method="post" action="#" class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
-                    <h4 class="modal-title">Tandai Surat Selesai</h4>
-                </div>
-                <div class="modal-body">
-                    <p>Tandai surat <b class="judul-surat"></b> sebagai selesai?</p>
-                    <p class="text-muted">Pastikan Anda sudah melihat atau mengunduh suratnya. Setelah selesai, surat pindah ke menu <b>Arsip Surat</b> dan tetap bisa diunduh lagi kapan saja.</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-default btn-sm" data-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-social btn-success btn-sm"><i class="fa fa-check-circle"></i>Ya, Selesai</button>
-                </div>
-            </form>
-        </div>
-    </div>
 @endsection
 
 @push('scripts')
+    {{-- Panggil Library PDF.js dari CDN --}}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
         $(document).ready(function() {
-            var tampil = 'aktif'; // KUSTOM permohonan dibatalkan
             var tabelData = $('#tabeldata').DataTable({
                 'processing': true,
                 'serverSide': true,
-                'ajax': {
-                    'url': '{{ base_url('layanan-mandiri/permohonan-surat') }}',
-                    // KUSTOM permohonan dibatalkan: filter Permohonan / Dibatalkan
-                    'data': function(d) {
-                        d.tampil = tampil;
-                    }
-                },
+                'ajax': '{{ base_url('layanan-mandiri/permohonan-surat') }}',
                 'order': [
-                    [5, 'desc'] // KUSTOM: kolom Tahapan ditambahkan
+                    [5, 'desc'] // Sesuaikan urutan kolom Tanggal Kirim (karena bertambah 1 kolom di indeks ke-5)
                 ],
                 'columnDefs': [{
                         'searchable': false,
-                        'targets': [0, 1, 4]
+                        'targets': [0, 1]
                     },
                     {
                         'orderable': false,
-                        'targets': [0, 1, 4]
+                        'targets': [0, 1]
                     }
                 ],
                 'columns': [{
@@ -226,75 +140,152 @@
                         name: 'surat.nama',
                     },
                     {
-                        data: 'tahapan',
-                        name: 'tahapan',
+                        // Menangkap elemen status dari kolom aksi untuk dipindah ke kolom Status tabel desktop
+                        data: null,
+                        name: 'status',
+                        className: 'padat text-center',
+                        render: function(data, type, row) {
+                            // Mencari label/status dari data aksi yang dikirim backend OpenSID
+                            var tempDiv = $('<div>').html(row.aksi);
+                            var $statusEl = tempDiv.find('.btn-proses, span.label, .badge, button.keterangan').first();
+                            if ($statusEl.length) {
+                                return $statusEl.prop('outerHTML');
+                            }
+                            return '-';
+                        }
                     },
                     {
                         data: 'created_at',
                         class: 'padat',
                     },
                 ],
+                'drawCallback': function() {
+                    var headers = [];
+                    $('#tabeldata thead th').each(function() {
+                        headers.push($(this).text().trim());
+                    });
+
+                    $('#tabeldata tbody tr').each(function() {
+                        var $tr = $(this);
+
+                        // 1. Sematkan atribut data-label pada tiap <td> asli
+                        $tr.find('td').each(function(index) {
+                            if (headers[index]) {
+                                $(this).attr('data-label', headers[index]);
+                            }
+                        });
+
+                        var $tdAksi = $tr.find('td.aksi');
+
+                        // 2. Ambil URL tombol unduh sebelum dihapus
+                        var btnUnduhTabel = $tdAksi.find('.fa-download, .fa-file-pdf-o').closest('a, button');
+                        var btnLihat = $tdAksi.find('a.lihat-surat');
+
+                        if (btnUnduhTabel.length && btnLihat.length) {
+                            btnLihat.attr('data-unduh', btnUnduhTabel.attr('href'));
+                        }
+                        btnUnduhTabel.remove();
+
+                        // 3. Ambil teks status dari elemen proses/label di td.aksi
+                        var $elemenStatus = $tdAksi.find('.btn-proses, span.label, .badge, button.keterangan, a:not(.lihat-surat)').first();
+                        
+                        if ($elemenStatus.length && $tr.find('td.status-mobile-row').length === 0) {
+                            var teksStatus = $elemenStatus.text().trim();
+                            
+                            if (teksStatus && !teksStatus.includes('Lihat Surat')) {
+                                var classWarna = 'status-badge-warning';
+                                if ($elemenStatus.hasClass('bg-green') || $elemenStatus.hasClass('btn-success') || $elemenStatus.hasClass('btn-info') || teksStatus.includes('Disetujui')) {
+                                    classWarna = 'status-badge-success';
+                                } else if ($elemenStatus.hasClass('bg-red') || $elemenStatus.hasClass('btn-danger')) {
+                                    classWarna = 'status-badge-danger';
+                                }
+
+                                var $barisStatus = $(
+                                    '<td class="status-mobile-row" data-label="Status">' +
+                                        '<span class="badge-status-card ' + classWarna + '">' + teksStatus + '</span>' +
+                                    '</td>'
+                                );
+                                $tr.append($barisStatus);
+                            }
+                        }
+
+                        // Hapus elemen status duplikat dan tag <br> di dalam td.aksi agar bersih
+                        $tdAksi.find('.btn-proses, span.label:not(.lihat-surat), .badge:not(.lihat-surat), button.keterangan').remove();
+                        $tdAksi.find('br').remove();
+                    });
+                }
             });
 
-            // KUSTOM permohonan dibatalkan: ganti filter daftar
-            $('.filter-tampil').on('click', function() {
-                tampil = $(this).data('tampil');
-                $('.filter-tampil').removeClass('btn-primary').addClass('btn-default');
-                $(this).removeClass('btn-default').addClass('btn-primary');
-                $('.keterangan-filter').toggle(tampil === 'aktif');
-                $('.hapus-semua-dibatalkan').toggle(tampil === 'dibatalkan'); // KUSTOM hapus riwayat
-                tabelData.ajax.reload();
+            $('button.keterangan').click(function(event) {
+                $(this).popover('show');
             });
 
-            // KUSTOM lihat surat: tampilkan surat yang sudah jadi di jendela pratinjau; di layar kecil dibuka di tab baru.
-            // Modal dipindah ke body agar tidak terkurung efek CSS (blur/transform) pembungkus konten tema.
+            // Fungsi Render PDF ke Canvas (Anti Layar Putih & Anti Cegat IDM)
+            function renderPdfToCanvas(url, container) {
+                container.html('<div class="pdf-loading-state"><i class="fa fa-spinner fa-spin fa-2x"></i><p style="margin-top: 10px;">Memuat pratinjau dokumen...</p></div>');
+
+                fetch(url, {
+                    credentials: 'same-origin',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('Gagal mengambil dokumen (Status: ' + response.status + ')');
+                    }
+                    return response.arrayBuffer();
+                })
+                .then(function(arrayBuffer) {
+                    return pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                })
+                .then(function(pdf) {
+                    container.empty();
+                    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                        pdf.getPage(pageNum).then(function(page) {
+                            var scale = 1.4;
+                            var viewport = page.getViewport({ scale: scale });
+                            var canvas = document.createElement('canvas');
+                            var context = canvas.getContext('2d');
+                            canvas.height = viewport.height;
+                            canvas.width = viewport.width;
+                            container.append(canvas);
+
+                            page.render({
+                                canvasContext: context,
+                                viewport: viewport
+                            });
+                        });
+                    }
+                })
+                .catch(function(error) {
+                    console.error('PDF Preview Error:', error);
+                    container.html(
+                        '<div class="pdf-loading-state">' +
+                        '<i class="fa fa-exclamation-circle fa-2x" style="color: #f87171;"></i>' +
+                        '<p style="margin-top: 10px;">Pratinjau diblokir oleh ekstensi unduhan browser Anda.<br>Silakan klik tombol <b>Unduh PDF</b> di pojok kanan bawah untuk membuka surat.</p>' +
+                        '</div>'
+                    );
+                });
+            }
+
             $('#modal-lihat-surat').appendTo('body');
             $('#tabeldata').on('click', 'a.lihat-surat', function(e) {
-                if (window.innerWidth < 768) {
-                    return;
-                }
                 e.preventDefault();
-                var url = $(this).attr('href');
+                var urlPreview = $(this).attr('href');
+                var urlUnduh = $(this).attr('data-unduh') || urlPreview;
+
                 var modal = $('#modal-lihat-surat');
+                var container = $('#pdf-preview-container');
+
                 modal.find('.modal-title').text($(this).data('judul') || 'Lihat Surat');
-                modal.find('iframe').attr('src', url);
-                modal.find('.unduh-surat').attr('href', url);
+                modal.find('.unduh-surat').attr('href', urlUnduh);
                 modal.modal('show');
+
+                renderPdfToCanvas(urlPreview, container);
             });
 
             $('#modal-lihat-surat').on('hidden.bs.modal', function() {
-                $(this).find('iframe').attr('src', 'about:blank');
+                $('#pdf-preview-container').empty();
             });
-
-            // KUSTOM: tombol Selesai -> konfirmasi, lalu kirim (POST) ke layanan-mandiri/surat/selesai/{id}
-            $('#modal-selesai-surat').appendTo('body');
-            $('#tabeldata').on('click', 'button.selesai-surat', function(e) {
-                e.preventDefault();
-                var modal = $('#modal-selesai-surat');
-                modal.find('form').attr('action', $(this).data('url'));
-                modal.find('.judul-surat').text($(this).data('judul') || '');
-                modal.modal('show');
-            });
-            // KUSTOM hapus riwayat: konfirmasi, lalu kirim (POST) ke layanan-mandiri/surat/hapus-dibatalkan/{id?}
-            $('#modal-hapus-dibatalkan').appendTo('body');
-            $(document).on('click', 'button.hapus-dibatalkan', function(e) {
-                e.preventDefault();
-                var modal = $('#modal-hapus-dibatalkan');
-                modal.find('form').attr('action', $(this).data('url'));
-                if ($(this).data('semua')) {
-                    modal.find('.pesan-hapus').html('Hapus <b>semua</b> riwayat permohonan yang dibatalkan?');
-                } else {
-                    modal.find('.pesan-hapus').empty().append('Hapus riwayat permohonan ', $('<b>').text($(this).data('judul') || 'surat'), ' yang dibatalkan?');
-                }
-                modal.modal('show');
-            });
-            $('#modal-hapus-dibatalkan form').on('submit', function() {
-                $(this).find('button[type=submit]').prop('disabled', true);
-            });
-            $('#modal-selesai-surat form').on('submit', function() {
-                $(this).find('button[type=submit]').prop('disabled', true);
-            });
-
         });
     </script>
 @endpush

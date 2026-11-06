@@ -36,6 +36,8 @@
  */
 
 use App\Models\Penduduk;
+use Illuminate\Auth\Events\Registered;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
 class RegisteredUserController extends Web_Controller
@@ -72,90 +74,67 @@ class RegisteredUserController extends Web_Controller
      */
     public function store()
     {
-        // KUSTOM pendaftaran-mandiri: warga mendaftar dengan password (bukan PIN 6 angka),
-        // email & Telegram tidak wajib, tanpa verifikasi email/Telegram.
-        // Akun dibuat nonaktif dan baru bisa dipakai setelah diverifikasi admin
-        // (menu Layanan Mandiri > Pendaftar Layanan Mandiri).
         $request = request();
 
-        // Tanggal lahir diisi warga dengan format DD-MM-YYYY (boleh pakai / atau .)
-        $tgl = str_replace(['/', '.'], '-', trim((string) $request->input('tanggallahir')));
-        $request->merge(['tanggallahir' => $tgl]);
-
+        // Validate the request data
         $data = $this->validated($request, [
             'nama'         => ['required'],
-            'tanggallahir' => ['required', 'date_format:d-m-Y', 'before_or_equal:today'],
+            'tanggallahir' => ['required', 'date_format:Y-m-d'],
             'nik'          => ['required', 'digits:16', 'regex:/^\d{16}$/'],
             'no_kk'        => ['required', 'digits:16', 'regex:/^\d{16}$/'],
-            'telepon'      => ['nullable', 'regex:/^[0-9+]{8,20}$/'],
-            'email'        => ['nullable', 'email'],
-            'telegram'     => ['nullable', 'regex:/^[0-9]{1,20}$/'],
-            'password'     => ['required', 'string', 'min:6', 'max:50', 'confirmed'],
-            'scan_1'       => 'required|image|mimes:gif,jpeg,jpg,png|max:4096',
-            'scan_2'       => 'required|image|mimes:gif,jpeg,jpg,png|max:4096',
-            'scan_3'       => 'required|image|mimes:gif,jpeg,jpg,png|max:4096',
-        ], [
-            'password.min'       => 'Password minimal 6 karakter.',
-            'password.confirmed' => 'Konfirmasi password tidak sama.',
-            'scan_1.max'         => 'Ukuran foto KTP maksimal 4 MB.',
-            'scan_2.max'         => 'Ukuran foto KK maksimal 4 MB.',
-            'scan_3.max'         => 'Ukuran foto selfie maksimal 4 MB.',
-            'telepon.regex'      => 'Nomor HP hanya boleh berisi angka.',
-            'tanggallahir.date_format'     => 'Tanggal lahir harus berformat DD-MM-YYYY, contoh 17-08-1985.',
-            'tanggallahir.before_or_equal' => 'Tanggal lahir tidak boleh melewati hari ini.',
+            'email'        => ['required', 'email', "unique:penduduk_hidup,email,{$request->email},email"],
+            'telegram'     => ['required', 'regex:/^[0-9]{1,20}$/', "unique:penduduk_hidup,telegram,{$request->telegram},telegram"],
+            'password'     => ['required', 'digits:6', 'regex:/^\d{6}$/', 'confirmed'],
+            'scan_1'       => 'required|image|mimes:gif,jpeg,jpg,png|max:1024',
+            'scan_2'       => 'required|image|mimes:gif,jpeg,jpg,png|max:1024',
+            'scan_3'       => 'required|image|mimes:gif,jpeg,jpg,png|max:1024',
         ]);
 
-        // Hanya penduduk hidup yang sudah ada di database: NIK, No. KK, nama, dan tanggal lahir harus cocok
+        // Retrieve the 'Penduduk' model based on the provided criteria
         $penduduk = Penduduk::query()
             ->whereRelation('keluarga', 'no_kk', $data['no_kk'])
-            ->where('nik', $data['nik'])
-            ->where('tanggallahir', DateTime::createFromFormat('!d-m-Y', $data['tanggallahir'])->format('Y-m-d'))
-            ->whereRaw('TRIM(nama) = ?', [trim(preg_replace('/\s+/', ' ', $data['nama']))])
-            ->where('status_dasar', 1)
+            ->where($request->only(['nama', 'tanggallahir', 'nik']))
             ->first();
 
+        // Return a error if the Penduduk is not found
         if (! $penduduk) {
-            $this->session->set_flashdata('notif', 'Pendaftaran tidak dapat diproses. Data Anda tidak ditemukan di data penduduk desa. Pastikan NIK, Nomor KK, nama (sesuai KTP), dan tanggal lahir sudah benar, atau hubungi operator desa.');
+            $this->session->set_flashdata('notif', 'Pendaftaran Anda tidak dapat diproses. Periksa kembali dan pastikan semua data yang Anda masukkan sudah benar dan sesuai.');
             $this->withInput();
 
             return redirect('layanan-mandiri/daftar');
         }
 
-        // Sudah pernah mendaftar / sudah punya akun
-        if (null !== $mandiri = $penduduk->mandiri()->first()) {
-            if (! $mandiri->aktif) {
-                return redirect_with('information', 'Anda sudah mendaftar. Akun Anda sedang diperiksa oleh operator desa. Silakan tunggu sampai akun diaktifkan.', 'layanan-mandiri/masuk');
-            }
-
-            return redirect_with('information', 'NIK ini sudah memiliki akun Layanan Mandiri. Silakan masuk, atau gunakan Lupa Password / hubungi operator desa.', 'layanan-mandiri/masuk');
-        }
-
-        // Simpan kontak bila diisi (email/Telegram yang sudah terverifikasi tidak ditimpa)
-        if (! empty($data['email']) && null === $penduduk->email_tgl_verifikasi) {
-            if (Penduduk::where('email', $data['email'])->where('id', '!=', $penduduk->id)->exists()) {
-                $this->session->set_flashdata('notif', 'Email tersebut sudah dipakai penduduk lain. Gunakan email lain atau kosongkan.');
-                $this->withInput();
-
-                return redirect('layanan-mandiri/daftar');
-            }
+        // Insert / update email and telegram if not verified
+        if (null === $penduduk->tgl_verifikasi_email) {
             $penduduk->email = $data['email'];
         }
-        if (! empty($data['telegram']) && null === $penduduk->telegram_tgl_verifikasi) {
+        if ($penduduk->tgl_verifikasi_telegram == null) {
             $penduduk->telegram = $data['telegram'];
-        }
-        if (! empty($data['telepon'])) {
-            $penduduk->telepon = $data['telepon'];
         }
         $penduduk->save();
 
+        // Check if the 'Penduduk' is already registered for 'Layanan Mandiri'
+        if (null !== $mandiri = $penduduk->mandiri()->first()) {
+            // Check if it is not already verified
+            if (! $mandiri->hasVerifiedEmail() || ! $mandiri->hasVerifiedTelegram()) {
+                Auth::guard('penduduk')->login($mandiri);
+                event(new Registered($mandiri));
+
+                return redirect('layanan-mandiri/daftar/verifikasi/email');
+            }
+
+            return redirect_with('notif', 'Anda sudah terdaftar di Layanan Mandiri. Saat ini, akun Anda sedang ditinjau oleh admin. Silakan tunggu konfirmasi lebih lanjut sebelum dapat melakukan login.', 'layanan-mandiri/masuk');
+        }
+
+        // Store files
         $filePaths = [
             'scan_ktp'    => $request->file('scan_1')->store('upload/pendaftaran', 'desa'),
             'scan_kk'     => $request->file('scan_2')->store('upload/pendaftaran', 'desa'),
             'foto_selfie' => $request->file('scan_3')->store('upload/pendaftaran', 'desa'),
         ];
 
-        // Akun nonaktif, menunggu verifikasi admin. ganti_pin = 0 karena password dibuat sendiri oleh warga.
-        $penduduk->mandiri()->create([
+        // Create a new 'mandiri' record for the 'Penduduk'
+        $mandiri = $penduduk->mandiri()->create([
             'aktif'       => 0,
             'scan_ktp'    => basename($filePaths['scan_ktp']),
             'scan_kk'     => basename($filePaths['scan_kk']),
@@ -164,6 +143,10 @@ class RegisteredUserController extends Web_Controller
             'pin'         => Hash::make($data['password']),
         ]);
 
-        return redirect_with('success', 'Pendaftaran berhasil dikirim. Operator desa akan memeriksa data Anda. Setelah akun diaktifkan, masuk dengan NIK dan password yang Anda buat.', 'layanan-mandiri/masuk');
+        Auth::guard('penduduk')->login($mandiri);
+
+        event(new Registered($mandiri));
+
+        return redirect('layanan-mandiri/daftar/verifikasi/email');
     }
 }

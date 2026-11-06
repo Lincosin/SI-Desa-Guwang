@@ -16,6 +16,34 @@
 @endsection
 
 @section('content')
+    <style>
+        /* Styling Container Pratinjau PDF Canvas untuk Modal Admin */
+        #pdf-preview-container-admin {
+            width: 100%;
+            height: 75vh;
+            overflow-y: auto;
+            background-color: #334155;
+            padding: 20px 10px;
+            text-align: center;
+        }
+
+        #pdf-preview-container-admin canvas {
+            display: block;
+            margin: 0 auto 16px auto;
+            max-width: 100%;
+            height: auto !important;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            border-radius: 4px;
+            background-color: #ffffff;
+        }
+
+        .pdf-loading-state {
+            color: #f8fafc;
+            padding: 60px 20px;
+            font-size: 15px;
+        }
+    </style>
+
     @include('admin.layouts.components.notifikasi')
 
     {!! form_open(null, 'class="form-horizontal"') !!}
@@ -96,7 +124,7 @@
     @endif
 
     @if ($surat->verifikasi_operator == '-1')
-        <div class="box box-danger">{{-- KUSTOM: dulu box-info --}}
+        <div class="box box-info">
             <div class="box-header with-border">
                 <h3 class="box-title">Alasan Ditolak</h3>
             </div>
@@ -164,48 +192,63 @@
             </div>
         </div>
         <div class="box-footer text-center">
-            {{-- KUSTOM: pilihan untuk surat yang ditolak --}}
-            @if ($surat->verifikasi_operator == -1 && ($operator || $kadus))
-                <div class="callout callout-warning text-left">
-                    <p>Surat ini ditolak. Pilih salah satu:</p>
-                    <ul>
-                        <li><b>Kirim Ulang</b>: kirim surat yang sama ke {{ $next ?: 'tahap berikutnya' }} tanpa perubahan.</li>
-                        @if ($mandiri)
-                            <li><b>Perbaiki Isi Surat</b>: buka lagi permohonan warga lalu buat ulang suratnya.</li>
-                            <li><b>Kembalikan ke Warga</b>: warga melengkapi atau memperbaiki permohonannya sendiri.</li>
-                        @endif
-                    </ul>
-                </div>
-            @endif
+            @include('admin.layouts.components.tombol_kembali', ['url' => ci_route('keluar.masuk'), 'label' => 'Daftar Permohonan', 'id' => 'back'])
 
-            @include('admin.layouts.components.tombol_kembali', ['url' => $kembali, 'label' => $label_kembali, 'id' => 'back']){{-- KUSTOM: dulu ke keluar.masuk "Daftar Permohonan" --}}
-
-            {{-- KUSTOM: PDF surat TinyMCE dibuat ulang dari isi surat bila berkasnya sudah dihapus, jadi tetap bisa dilihat sebelum disetujui --}}
-            @if (is_file($surat->filesurat . '.pdf') || ($surat->status && $surat->isi_surat && $surat->nama_surat))
+            @if (in_array($surat->formatSurat->jenis, \App\Models\FormatSurat::TINYMCE) || is_file($surat->filesurat . '.pdf'))
                 <button type="button" class="btn btn-social btn-primary btn-sm preview"><i class="fa fa-file-pdf-o"></i>Lihat PDF</button>
-            @elseif(is_file($surat->filesurat . '.rtf'))
+            @elseif (is_file($surat->filesurat . '.rtf'))
                 <a href="{{ ci_route('keluar.unduh.rtf', $surat->id) }}" class="btn bg-purple btn-sm" title="Unduh Surat RTF" target="_blank"><i class="fa fa-file-word-o"></i> Unduh File</a>
             @endif
 
             <button type="button" class="btn btn-social btn-success btn-sm verifikasi" data-ulang="{{ $surat->verifikasi_operator == -1 ? 'true' : 'false' }}"><i class="fa fa-check-circle"></i>{{ $surat->verifikasi_operator == -1 ? 'Kirim Ulang' : 'Setujui' }}</button>
 
-            @if (!$operator && $surat->verifikasi_operator != -1){{-- KUSTOM: surat yang sudah ditolak tidak ditolak lagi --}}
+            @if (!$operator)
                 <button type="button" class="btn btn-social btn-danger btn-sm ditolak"><i class="fa fa-times"></i>Tolak</button>
             @endif
 
-            @if ($surat->verifikasi_operator == -1 && ($operator || $kadus) && $mandiri){{-- KUSTOM: Kadus juga menangani surat yang ditolak --}}
-                <button type="button" class="btn btn-social btn-warning btn-sm perbaiki-isi" data-url="{{ ci_route('permohonan_surat_admin.periksa', $mandiri->id) }}"><i class="fa fa-pencil"></i>Perbaiki Isi Surat</button>
-                <button type="button" class="btn btn-social btn-danger btn-sm kembalikan"><i class="fa fa-undo"></i>Kembalikan ke Warga</button>
+            @if ($surat->verifikasi_operator == -1 && $operator && $mandiri)
+                <button type="button" class="btn btn-social btn-danger btn-sm kembalikan"><i class="fa fa-times"></i>Kembalikan</button>
             @endif
         </div>
     </div>
 
-    </form>
+    {!! form_close() !!}
+
+    {{-- KUSTOM Modal Pratinjau PDF dengan Canvas PDF.js --}}
+    <div class="modal fade" id="modal-preview-pdf" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" role="document" style="width: 95%; max-width: 1000px;">
+            <div class="modal-content">
+                <div class="modal-header bg-green">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" style="color: #fff;">Pratinjau Dokumen Surat</h4>
+                </div>
+                <div class="modal-body" style="padding: 0;">
+                    <div id="pdf-preview-container-admin">
+                        <div class="pdf-loading-state">
+                            <i class="fa fa-spinner fa-spin fa-2x"></i>
+                            <p style="margin-top: 10px;">Memuat pratinjau dokumen...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a href="{{ ci_route('keluar.unduh/tinymce', $surat->id) }}" class="btn btn-social bg-fuchsia btn-sm" target="_blank" download><i class="fa fa-download"></i>Unduh PDF</a>
+                    <button type="button" class="btn btn-default btn-sm" data-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('scripts')
+    {{-- Panggil Library PDF.js dari CDN --}}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script type="text/javascript">
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
         $(function() {
+            // Pindahkan modal ke body agar tidak terhalang struktur CSS admin
+            $('#modal-preview-pdf').appendTo('body');
+
             $('button.verifikasi').click(function(e) {
                 e.preventDefault();
                 var id = $('#idsurat').val();
@@ -214,10 +257,9 @@
                 var ulang = $(this).data('ulang')
                 var pesan = `Apakah setuju surat ini di teruskan ke ${next}?`
                 if (next != '' && ulang) {
-                    pesan = `Kirim ulang surat ini ke ${next}?` // KUSTOM: dulu "untuk diperiksa?"
+                    pesan = `Kirim ulang surat ini untuk diperiksa?`
                 } else if (next == '' && tte == '0') {
-                    // KUSTOM: surat permohonan warga langsung siap diunduh warga setelah disetujui
-                    pesan = {{ $mandiri ? 'true' : 'false' }} ? `Setujui surat ini? Setelah disetujui, warga dapat melihat dan mengunduh suratnya.` : `Apakah setuju surat ini di teruskan ke Arsip?`
+                    pesan = `Apakah setuju surat ini di teruskan ke Arsip?`
                 } else if (next == '' && tte == '1') {
                     pesan = 'Apakah setuju surat ini untuk ditandatangani secara elektronik?'
                 }
@@ -227,7 +269,7 @@
                 }
 
                 var redirect = {
-                    'confirm': `{{ $kembali }}`, // KUSTOM: dulu keluar.masuk
+                    'confirm': `{{ ci_route('keluar.masuk') }}`,
                 }
                 var data = {
                     id: id
@@ -239,99 +281,97 @@
                 e.preventDefault();
                 var id = $('#idsurat').val();
                 var ulr_ajax = `{{ ci_route('keluar.tolak') }}`;
-                var redirect = `{{ $kembali }}`; // KUSTOM: dulu keluar.masuk
+                var redirect = `{{ ci_route('keluar.masuk') }}`;
                 ditolak(id, ulr_ajax, redirect, 'Konfirmasi Pengembalian Surat', 'Pesan singkat alasan pengembalian', 'Pesan singkat alasan permohonan surat dikembalikan');
             });
 
             $('button.kembalikan').click(function(e) {
                 e.preventDefault();
-                console.log(e)
                 var id = $('#idsurat').val();
                 var ulr_ajax = `{{ ci_route('keluar.kembalikan') }}`;
-                var redirect = `{{ $kembali }}`; // KUSTOM: dulu keluar.masuk
+                var redirect = `{{ ci_route('keluar.masuk') }}`;
                 ditolak(id, ulr_ajax, redirect, 'Konfirmasi Pengembalian Permohonan', 'Pesan singkat alasan permohonan surat dikembalikan', 'Pesan singkat alasan permohonan surat dikembalikan');
             });
 
-            // KUSTOM: surat ditolak diperbaiki dari data permohonan -> permohonan kembali ke Sedang Diperiksa,
-            // surat yang ditolak dihapus, lalu langsung dibuka halaman pemeriksaan permohonan
-            $('button.perbaiki-isi').click(function(e) {
-                e.preventDefault();
-                var tujuan = $(this).data('url');
-                Swal.fire({
-                    title: 'Perbaiki isi surat?',
-                    text: 'Surat yang ditolak akan dihapus, lalu Anda membuat ulang suratnya dari data permohonan warga.',
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonText: 'Ya, perbaiki',
-                    cancelButtonText: 'Tutup',
-                    showLoaderOnConfirm: true,
-                    preConfirm: () => $.ajax({
-                        url: `{{ ci_route('keluar.kembalikan') }}`,
-                        type: 'POST',
-                        dataType: 'json',
-                        data: {
-                            id: $('#idsurat').val(),
-                            tujuan: 'periksa'
-                        }
-                    }).fail((error) => Swal.showValidationMessage(`Gagal: ${error.statusText}`)),
-                }).then((result) => {
-                    if (!result.isConfirmed) {
-                        return;
+            // Fungsi Render PDF ke Canvas menggunakan PDF.js
+            function renderPdfToCanvas(url, container) {
+                container.html('<div class="pdf-loading-state"><i class="fa fa-spinner fa-spin fa-2x"></i><p style="margin-top: 10px;">Memuat pratinjau dokumen...</p></div>');
+
+                fetch(url, {
+                    credentials: 'same-origin',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('Gagal mengambil dokumen (Status: ' + response.status + ')');
                     }
-                    if (result.value && result.value.status == true) {
-                        window.location.replace(tujuan);
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            text: (result.value && result.value.message) || 'Surat gagal dibuka untuk diperbaiki.'
+                    return response.arrayBuffer();
+                })
+                .then(function(arrayBuffer) {
+                    return pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                })
+                .then(function(pdf) {
+                    container.empty();
+                    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                        pdf.getPage(pageNum).then(function(page) {
+                            var scale = 1.4;
+                            var viewport = page.getViewport({ scale: scale });
+                            var canvas = document.createElement('canvas');
+                            var context = canvas.getContext('2d');
+                            canvas.height = viewport.height;
+                            canvas.width = viewport.width;
+                            container.append(canvas);
+
+                            page.render({
+                                canvasContext: context,
+                                viewport: viewport
+                            });
                         });
                     }
+                })
+                .catch(function(error) {
+                    console.error('PDF Preview Error:', error);
+                    container.html(
+                        '<div class="pdf-loading-state">' +
+                        '<i class="fa fa-exclamation-circle fa-2x" style="color: #f87171;"></i>' +
+                        '<p style="margin-top: 10px;">Pratinjau diblokir oleh ekstensi unduhan browser Anda.<br>Silakan klik tombol <b>Unduh PDF</b> di bawah untuk membuka surat.</p>' +
+                        '</div>'
+                    );
                 });
-            });
+            }
 
             $('button.preview').click(function(e) {
                 e.preventDefault();
-                var id = $(this).data('id');
-                Swal.fire({
-                    customClass: {
-                        popup: 'swal-lg',
-                    },
-                    title: 'Lihat',
-                    html: `<object data="{{ ci_route('keluar.unduh/tinymce', $surat->id . '/true') }}#toolbar=0" style="width: 100%;min-height: 400px;" type="application/pdf"></object>`,
-                    showCancelButton: true,
-                    cancelButtonText: 'tutup',
-                    showConfirmButton: false,
-                })
+                var url = `{{ ci_route('keluar.unduh/tinymce', $surat->id . '/true') }}`;
+                var modal = $('#modal-preview-pdf');
+                var container = $('#pdf-preview-container-admin');
+
+                modal.modal('show');
+                renderPdfToCanvas(url, container);
+            });
+
+            $('#modal-preview-pdf').on('hidden.bs.modal', function() {
+                $('#pdf-preview-container-admin').empty();
             });
 
             $('button.lampiran').click(function(e) {
                 e.preventDefault();
-                var id = $(this).data('id');
-                Swal.fire({
-                    customClass: {
-                        popup: 'swal-lg',
-                    },
-                    title: 'Lihat',
-                    html: `<object data="{{ ci_route('keluar.unduh/lampiran', $surat->id . '/true') }}#toolbar=0" style="width: 100%;min-height: 400px;" type="application/pdf"></object>`,
-                    showCancelButton: true,
-                    cancelButtonText: 'tutup',
-                    showConfirmButton: false,
-                })
+                var url = `{{ ci_route('keluar.unduh/lampiran', $surat->id . '/true') }}`;
+                var modal = $('#modal-preview-pdf');
+                var container = $('#pdf-preview-container-admin');
+
+                modal.modal('show');
+                renderPdfToCanvas(url, container);
             });
 
             $('a.syarat').click(function(e) {
                 e.preventDefault();
                 var attr = $(this).attr('href');
-                Swal.fire({
-                    customClass: {
-                        popup: 'swal-lg',
-                    },
-                    title: 'Lihat',
-                    html: `<object data="${attr}#toolbar=0" style="width: 100%;min-height: 400px;" ></object>`,
-                    showCancelButton: true,
-                    cancelButtonText: 'tutup',
-                    showConfirmButton: false,
-                })
+                var modal = $('#modal-preview-pdf');
+                var container = $('#pdf-preview-container-admin');
+
+                modal.modal('show');
+                renderPdfToCanvas(attr, container);
             });
         });
     </script>

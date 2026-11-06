@@ -1,16 +1,30 @@
 @extends('layanan_mandiri.auth.index')
 
 @section('content')
+    {{-- Panggil File CSS Custom yang sama --}}
+    <link rel="stylesheet" href="{{ asset('css/login-guwang.css') }}">
+
+    @include('admin.layouts.components.notifikasi')
+
+    <div class="guwang-auth-header">
+        <div class="guwang-auth-headerTop">
+            <a href="{{ base_url('/') }}" class="btn-back-website">
+                Beranda Desa <i class="fa fa-arrow-right"></i>
+            </a>
+        </div>
+        <h2>Masuk dengan e-KTP</h2>
+        <p>Tempelkan kartu e-KTP Anda pada perangkat <i>card reader</i> yang tersedia.</p>
+    </div>
+
     <form id="validasi" autocomplete="off" action="{{ $form_action }}" method="post" class="login-form">
-        <div class="login-footer-top">
-            @if ($cek_anjungan)
-                Tempelkan e-KTP Pada Card Reader
-            @endif
-            <div class="thumbnail">
-                <img src="{{ asset('images/camera-scan.gif') }}" alt="scanner" class="center" style="width:30%">
+        <div class="login-footer-top" style="text-align: center; margin-bottom: 16px;">
+            <div class="thumbnail" style="background: transparent; border: none; box-shadow: none;">
+                <img src="{{ asset('images/camera-scan.gif') }}" alt="scanner" class="center" style="width: 28%; opacity: 0.85; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.3));">
             </div>
         </div>
+
         <input type="hidden" name="anjungan_uuid" id="anjungan_uuid">
+
         <div class="form-group form-login" style="{{ jecho($cek_anjungan == 0 || ENVIRONMENT == 'development', false, 'width: 0; height: 0; overflow: hidden;') }}">
             <input
                 name="tag_id_card"
@@ -22,46 +36,55 @@
                 onkeypress="if (event.keyCode == 13){$('#'+'validasi').attr('action', '{{ $form_action }}');$('#'+'validasi').submit();}"
             >
         </div>
+
         @if (!$cek_anjungan)
             <div class="form-group form-login">
-                <input type="password" class="form-control required" name="password" placeholder="Masukkan Password" autocomplete="off" maxlength="50">
+                <input type="password" class="form-control required number" name="password" placeholder="Masukan PIN" autocomplete="off" maxlength="6">
             </div>
             <div class="form-group">
-                <button type="submit" class="btn btn-block bg-green"><b>MASUK</b></button>
+                <button type="submit" class="btn btn-submit-guwang">Masuk Sekarang</button>
             </div>
         @endif
-        <div class="form-group">
-            <a href="{{ site_url('layanan-mandiri/masuk') }}">
-                <button type="button" class="btn btn-block bg-green"><b>MASUK DENGAN NIK</b></button>
-            </a>
+
+        <div class="auth-divider">
+            <span>Metode Lainnya</span>
         </div>
-        <div class="form-group">
+
+        <div class="secondary-actions-grid">
+            <a href="{{ site_url('layanan-mandiri/masuk') }}" class="full-width-col">
+                <button type="button" class="btn-outline-guwang">
+                    <i class="fa fa-user"></i> Masuk dengan NIK & PIN
+                </button>
+            </a>
+
             <a href="{{ site_url('layanan-mandiri/lupa-pin') }}">
-                <button type="button" class="btn btn-block bg-green"><b>LUPA PASSWORD</b></button>
+                <button type="button" class="btn-outline-guwang">
+                    <i class="fa fa-key"></i> Lupa PIN
+                </button>
             </a>
-        </div>
-        {{-- KUSTOM pendaftaran-mandiri --}}
-        @if (setting('tampilkan_pendaftaran'))
-            <div class="form-group smd-daftar">
-                <span class="smd-daftar__teks">Belum punya akun?</span>
+
+            @if (setting('tampilkan_pendaftaran'))
                 <a href="{{ site_url('layanan-mandiri/daftar') }}">
-                    <button type="button" class="btn btn-block bg-green smd-daftar__tombol"><b>DAFTAR AKUN BARU</b></button>
+                    <button type="button" class="btn-outline-guwang">
+                        <i class="fa fa-user-plus"></i> Daftar Akun
+                    </button>
                 </a>
-            </div>
-        @endif
-        @if (in_array(\Modules\Anjungan\Models\Anjungan::ANJUNGAN, $cek_anjungan['tipe'] ?? []))
-            <div class="form-group">
-                <a href="{{ route('anjungan.index') }}">
-                    <button type="button" class="btn btn-block bg-green"><b>ANJUNGAN</b></button>
+            @endif
+
+            @if (in_array(\Modules\Anjungan\Models\Anjungan::ANJUNGAN, $cek_anjungan['tipe'] ?? []))
+                <a href="<?= route('anjungan.index') ?>" class="full-width-col">
+                    <button type="button" class="btn-outline-guwang">
+                        <i class="fa fa-desktop"></i> Halaman Anjungan
+                    </button>
                 </a>
-            </div>
-        @endif
+            @endif
+        </div>
     </form>
 @endsection
+
 @push('script')
     <script type="text/javascript">
         $('document').ready(function() {
-            // Get UUID from local storage and set it to the hidden input
             const anjungan_uuid = localStorage.getItem('anjungan_uuid');
             if (anjungan_uuid) {
                 $('#anjungan_uuid').val(anjungan_uuid);

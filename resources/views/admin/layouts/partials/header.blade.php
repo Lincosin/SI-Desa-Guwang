@@ -145,7 +145,7 @@
             </ul>
             </li>
             @endif
-
+<!-- 
             <li class="dropdown user user-menu">
                 <a href="#" class="dropdown-toggle" data-toggle="dropdown">
                     <img src="{{ AmbilFoto($auth->foto) }}" class="user-image" alt="User Image" />
@@ -182,7 +182,7 @@
                     </a>
                 </li>
             @endif
-            </li>
+            </li> -->
             </ul>
         </div>
     </nav>

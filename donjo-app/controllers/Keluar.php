@@ -91,31 +91,6 @@ class Keluar extends Admin_Controller
     }
 
     /**
-     * KUSTOM: Kades, Sekdes dan Kepala Dusun memeriksa dan menyetujui surat dari menu Permohonan Surat.
-     * Bagi mereka Arsip Layanan hanya berisi arsip.
-     */
-    private function bukanOperator(): bool
-    {
-        return in_array($this->isAdmin->jabatan_id, [kades()->id, sekdes()->id]) || $this->isKadus();
-    }
-
-    /**
-     * KUSTOM: saat ditolak, berkas PDF surat dihapus dan nama_surat dikosongkan. Jika surat dikirim ulang
-     * tanpa diubah, beri nama berkas lagi agar PDF bisa dibuat ulang dari isi surat saat dilihat atau diunduh.
-     */
-    private function pulihkanNamaSurat(LogSurat $surat): void
-    {
-        if ($surat->nama_surat || ! $surat->isi_surat || ! $surat->formatSurat) {
-            return;
-        }
-
-        $nik   = $surat->penduduk->nik ?? $surat->nik_non_warga;
-        $nomor = preg_replace('/[^a-zA-Z0-9.]/', '-', str_replace("'", '', (string) $surat->no_surat));
-
-        $surat->update(['nama_surat' => $surat->formatSurat->url_surat . '_' . $nik . '_' . date('Y-m-d') . '_' . $nomor . '.pdf']);
-    }
-
-    /**
      * KUSTOM verifikasi kadus: tahap berikut setelah kadus / operator (tanpa kadus).
      */
     private function tahapSetelahKadus(): array
@@ -155,14 +130,9 @@ class Keluar extends Admin_Controller
     {
         $this->alihkan();
 
-        // KUSTOM: Kades/Sekdes/Kadus menyetujui surat dari menu Permohonan Surat
-        if ($this->bukanOperator()) {
-            redirect_with('information', 'Surat yang menunggu persetujuan Anda kini ada di menu Permohonan Surat.', 'permohonan_surat_admin');
-        }
-
         $data['tab_ini']    = 11;
         $data['state']      = 'masuk';
-        $data['title']      = 'Surat Menunggu Persetujuan'; // KUSTOM: dulu 'Permohonan Surat', mirip menu Permohonan Surat
+        $data['title']      = 'Permohonan Surat';
         $data['redirect']   = 'masuk';
         $ref_jabatan_kades  = setting('sebutan_kepala_desa');
         $ref_jabatan_sekdes = setting('sebutan_sekretaris_desa');
@@ -190,11 +160,6 @@ class Keluar extends Admin_Controller
     public function ditolak(): void
     {
         $this->alihkan();
-
-        // KUSTOM: surat yang ditolak kembali ke Kadus lewat menu Permohonan Surat
-        if ($this->bukanOperator()) {
-            redirect_with('information', 'Surat yang ditolak kini ada di menu Permohonan Surat.', 'permohonan_surat_admin');
-        }
 
         $data['tab_ini']  = 12;
         $data['state']    = 'tolak';
@@ -638,20 +603,14 @@ class Keluar extends Admin_Controller
         $mandiri            = $this->permohonanDariSurat($surat);
         $ref_jabatan_kades  = setting('sebutan_kepala_desa');
         $ref_jabatan_sekdes = setting('sebutan_sekretaris_desa');
-        $tambahan           = []; // KUSTOM: kolom lain yang ikut diperbarui
-
-        // KUSTOM: surat yang ditolak lalu dikirim ulang tanpa diubah
-        $ditolak = (int) $surat->verifikasi_operator === LogSurat::TOLAK;
-        if ($ditolak) {
-            $this->pulihkanNamaSurat($surat);
-        }
 
         switch ($this->isAdmin->jabatan_id) {
             // verifikasi kades
             case kades()->id:
                 $current = 'verifikasi_kades';
-                $next    = (setting('tte') && in_array($surat->formatSurat->jenis, FormatSurat::TINYMCE)) ? 'tte' : null;
-                $log     = (setting('tte')) ? 'TTE' : null;
+                // KUSTOM: Langsung selesaikan & tandatangani saat Kades klik Setuju (tanpa tertahan tahap passphrase BSrE)
+                $next    = null;
+                $log     = null;
                 break;
 
                 // verifikasi sekdes
@@ -665,13 +624,6 @@ class Keluar extends Admin_Controller
             default:
                 // KUSTOM verifikasi kadus
                 $kadusPemohon = LogSurat::penggunaKadus($surat->id_pend);
-                // KUSTOM: Kadus mengirim ulang surat yang ditolak -> langsung ke tahap setelah Kadus
-                if ($this->isKadus() && $ditolak) {
-                    $current      = 'verifikasi_kadus';
-                    [$next, $log] = $this->tahapSetelahKadus();
-                    $tambahan     = ['verifikasi_operator' => LogSurat::TERIMA];
-                    break;
-                }
                 if ($this->isKadus() && $surat->verifikasi_kadus !== null && (int) $surat->verifikasi_kadus === 0) {
                     $current      = 'verifikasi_kadus';
                     [$next, $log] = $this->tahapSetelahKadus();
@@ -694,10 +646,23 @@ class Keluar extends Admin_Controller
                 break;
         }
 
+        // 1. Cari bagian if ($next == null) di dalam public function verifikasi() (Sekitar baris 541):
         if ($next == null) {
-            LogSurat::where('id', '=', $id)->update(array_merge([$current => 1, 'log_verifikasi' => $log], $tambahan));
+            $updateData = [
+                $current         => 1,
+                'log_verifikasi' => $log,
+            ];
 
-            // Hapus PDF lama (pratinjau sebelum disetujui) agar dibuat ulang saat diunduh warga/admin
+            // KUSTOM TTD PNG KADES: Ambil isi_surat langsung dari DB dan sisipkan gambar TTD
+            if ($this->isAdmin->jabatan_id == kades()->id) {
+                $isiSuratAsli            = LogSurat::where('id', '=', $id)->value('isi_surat');
+                $updateData['isi_surat'] = $this->sisipkanTtdKades($isiSuratAsli);
+                $updateData['tte']       = 1;
+            }
+
+            LogSurat::where('id', '=', $id)->update($updateData);
+
+            // Hapus PDF lama agar dibuat ulang saat dilihat/diunduh
             if ($surat->nama_surat && file_exists(FCPATH . LOKASI_ARSIP . $surat->nama_surat)) {
                 unlink(FCPATH . LOKASI_ARSIP . $surat->nama_surat);
             }
@@ -714,16 +679,10 @@ class Keluar extends Admin_Controller
             }
         } else {
             $log_surat = LogSurat::with(['formatSurat'])->where('id', '=', $id)->first();
-            $log_surat->update(array_merge([$current => 1,  $next => 0, 'log_verifikasi' => $log], $tambahan));
+            $log_surat->update([$current => 1,  $next => 0, 'log_verifikasi' => $log]);
 
             // hapus surat pdf agar bisa digenerate ulang.
-            // KUSTOM: hanya jika berkasnya ada (surat yang pernah ditolak tidak punya berkas PDF)
-            if ($log_surat->nama_surat && file_exists(FCPATH . LOKASI_ARSIP . $log_surat->nama_surat)) {
-                unlink(FCPATH . LOKASI_ARSIP . $log_surat->nama_surat);
-            }
-
-            // KUSTOM notifikasi WhatsApp: pemeriksa tahap berikutnya (Kadus / Sekdes / Kades)
-            LogSurat::waTahapBerikut($id);
+            unlink(FCPATH . LOKASI_ARSIP . $log_surat->nama_surat);
 
             // KUSTOM verifikasi kadus: notifikasi hanya ke kadus pemohon
             if ($next === 'verifikasi_kadus') {
@@ -903,14 +862,95 @@ class Keluar extends Admin_Controller
     {
         $this->alihkan();
 
-        $id = $this->input->post('id');
-        LogSurat::where('id', '=', $id)->update([
-            'tte' => 1,
-        ]);
+        $id    = $this->input->post('id');
+        $surat = LogSurat::find($id);
+
+        if ($surat) {
+            $surat->update([
+                'tte'            => 1,
+                'log_verifikasi' => null,
+                'isi_surat'      => $this->sisipkanTtdKades($surat->isi_surat),
+            ]);
+
+            // Hapus PDF lama agar digenerate ulang dengan TTD baru
+            if ($surat->nama_surat && file_exists(FCPATH . LOKASI_ARSIP . $surat->nama_surat)) {
+                unlink(FCPATH . LOKASI_ARSIP . $surat->nama_surat);
+            }
+
+            // Update status permohonan mandiri warga jadi Siap Diambil (3)
+            $mandiri = $this->permohonanDariSurat($surat);
+            if ($mandiri != null) {
+                $mandiri->update(['status' => 3]);
+            }
+        }
 
         return json([
             'status' => true,
         ]);
+    }
+    
+    /**
+     * KUSTOM: Menyisipkan gambar PNG Tanda Tangan Kades ke dalam tabel HTML isi_surat (kompatibel penuh dengan Html2Pdf)
+     */
+    private function sisipkanTtdKades(?string $isiSurat): ?string
+    {
+        if (empty($isiSurat)) {
+            return $isiSurat;
+        }
+
+        // 1. Cari file gambar TTD Kades (.png)
+        $pathFile = FCPATH . 'desa/upload/media/ttd_kades.png';
+        if (! file_exists($pathFile) && setting('visual_tte_gambar')) {
+            $pathFile = FCPATH . LOKASI_MEDIA . setting('visual_tte_gambar');
+        }
+
+        if (! file_exists($pathFile)) {
+            return $isiSurat;
+        }
+
+        // Jangan sisipkan dua kali jika sudah ada gambar TTD base64 sebelumnya
+        if (stripos($isiSurat, 'alt="TTD Kades"') !== false) {
+            return $isiSurat;
+        }
+
+        // 2. Gunakan Base64 dengan atribut width & height HTML murni (wajib untuk Html2Pdf di dalam <td>)
+        $imgData  = base64_encode(file_get_contents($pathFile));
+        $mimeType = mime_content_type($pathFile) ?: 'image/png';
+        $lebar    = (int) (setting('visual_tte_weight') ?: 110);
+        $tinggi   = (int) (setting('visual_tte_height') ?: 65);
+
+        $tagImgOnly = '<img src="data:' . $mimeType . ';base64,' . $imgData . '" width="' . $lebar . '" height="' . $tinggi . '" alt="TTD Kades" style="display: inline-block;" />';
+
+        // 3. Jika masih ada teks [qr_bsre] atau [ttd_kades], ganti langsung
+        foreach (['[qr_bsre]', '[ttd_kades]', '[visual_tte]'] as $placeholder) {
+            if (stripos($isiSurat, $placeholder) !== false) {
+                return str_ireplace($placeholder, $tagImgOnly, $isiSurat);
+            }
+        }
+
+        // 4. Karena TinyMCE menghapus [qr_bsre] dan menyisakan sel <td> kosong di atas baris [Nama_pamonG],
+        //    atau kita bisa menaruh gambar TTD + <br> langsung di dalam sel nama Kepala Desa:
+        $namaKades = trim(Pamong::kepalaDesa()->first()->pamong_nama ?? '');
+        if ($namaKades !== '' && stripos($isiSurat, $namaKades) !== false) {
+            $escapedNama = preg_quote($namaKades, '/');
+
+            // Strategi A: Jika ada baris <tr> ruang tanda tangan kosong tepat di atas <tr> nama Kades (sesuai template tabel Anda),
+            // isi sel kolom kanan pada baris kosong tersebut dengan gambar TTD
+            $patternTrKosong = '/(<tr[^>]*>\s*(?:<td[^>]*>(?:\s|&nbsp;|<br\s*\/?>|<p[^>]*>(?:\s|&nbsp;|<br\s*\/?>)*<\/p>)*<\/td>\s*)*<td[^>]*>)(?:\s|&nbsp;|<br\s*\/?>|<p[^>]*>(?:\s|&nbsp;|<br\s*\/?>)*<\/p>)*(<\/td>\s*<\/tr>\s*<tr[^>]*>(?:(?!<\/tr>)[\s\S])*?' . $escapedNama . ')/is';
+            if (preg_match($patternTrKosong, $isiSurat)) {
+                return preg_replace($patternTrKosong, '$1<p style="text-align: center; margin: 0;">' . $tagImgOnly . '</p>$2', $isiSurat, 1);
+            }
+
+            // Strategi B: Sisipkan gambar TTD tepat di atas teks nama Kades di dalam elemen yang sama
+            return preg_replace(
+                '/(' . $escapedNama . ')/i',
+                $tagImgOnly . '<br><br>$1',
+                $isiSurat,
+                1
+            );
+        }
+
+        return $isiSurat;
     }
 
     public function kembalikan()
@@ -928,19 +968,7 @@ class Keluar extends Admin_Controller
                     'message' => 'Surat tidak ditemukan!',
                 ]);
             }
-            if ($this->input->post('tujuan') === 'periksa') {
-                // KUSTOM: surat ditolak diperbaiki sendiri oleh Kadus/operator -> permohonan kembali ke Sedang Diperiksa
-                // agar surat dibuat ulang dari data permohonan lewat menu Permohonan Surat
-                if ((int) $surat->verifikasi_operator !== LogSurat::TOLAK || in_array($this->isAdmin->jabatan_id, [kades()->id, sekdes()->id])) {
-                    return json([
-                        'status'  => false,
-                        'message' => 'Hanya surat yang ditolak yang dapat diperbaiki ulang oleh Kepala Dusun atau operator.',
-                    ]);
-                }
-                $mandiri->update(['status' => PermohonanSurat::SEDANG_DIPERIKSA]);
-            } else {
-                $mandiri->update(['status' => 0, 'alasan' => $alasan]);
-            }
+            $mandiri->update(['status' => 0, 'alasan' => $alasan]);
             $surat->delete();
 
             return json([
@@ -964,7 +992,6 @@ class Keluar extends Admin_Controller
         $data['mandiri']      = $this->permohonanDariSurat($surat);
         $data['individu']     = $surat->penduduk;
         $data['operator']     = ($this->isAdmin->jabatan_id == kades()->id || $this->isAdmin->jabatan_id == sekdes()->id || $this->isKadus()) ? false : true;
-        $data['kadus']        = $this->isKadus(); // KUSTOM: Kadus menangani surat yang ditolak
         $data['list_dokumen'] = Dokumen::hidup()->where('id_pend', $data['individu']->id)->get();
         if ($data['mandiri']) {
             $data['list_dokumen_syarat'] = $data['list_dokumen']->whereIn('id', $data['mandiri']->syarat);
@@ -986,11 +1013,6 @@ class Keluar extends Admin_Controller
             $next = null;
         }
         $data['next'] = $next;
-
-        // KUSTOM: dibuka dari menu Permohonan Surat -> kembali ke sana setelah disetujui/ditolak
-        $dariPermohonan        = $this->input->get('kembali') === 'permohonan';
-        $data['kembali']       = $dariPermohonan ? ci_route('permohonan_surat_admin') : ci_route('keluar.masuk');
-        $data['label_kembali'] = $dariPermohonan ? 'Daftar Permohonan Surat' : 'Daftar Menunggu Persetujuan';
 
         return view('admin.surat.periksa', $data);
     }

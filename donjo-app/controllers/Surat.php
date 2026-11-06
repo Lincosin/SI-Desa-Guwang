@@ -532,7 +532,6 @@ class Surat extends Admin_Controller
                 $logSurat->save();
                 $this->tandaiPermohonanDikirim($cetak); // KUSTOM
                 $this->notifikasiMobile($cetak, $logSurat->id);
-                LogSurat::waTahapBerikut($logSurat->id); // KUSTOM notifikasi WhatsApp ke pemeriksa berikutnya
 
                 $this->tinymce->pdfMerge->merge(FCPATH . LOKASI_ARSIP . $nama_surat, 'FI');
             }
@@ -618,9 +617,8 @@ class Surat extends Admin_Controller
             $isianKadus = LogSurat::isianVerifikasiOlehKadus($log_surat['id_pend']);
             $log_surat  = array_merge($log_surat, $isianKadus);
 
-            if ($logKonsep = LogSurat::updateOrCreate(['id' => $cetak['id']], $log_surat)) {
+            if (LogSurat::updateOrCreate(['id' => $cetak['id']], $log_surat)) {
                 $this->tandaiPermohonanDikirim($cetak); // KUSTOM
-                LogSurat::waTahapBerikut($logKonsep->id); // KUSTOM notifikasi WhatsApp ke pemeriksa berikutnya
                 redirect_with('success', $isianKadus ? 'Berhasil Simpan Konsep, surat diteruskan untuk ' . ($isianKadus['log_verifikasi'] ?? 'diproses') : 'Berhasil Simpan Konsep', $isianKadus ? 'keluar' : 'keluar/masuk');
             }
         }

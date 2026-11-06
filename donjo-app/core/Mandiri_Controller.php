@@ -78,12 +78,6 @@ class Mandiri_Controller extends MY_Controller
             $hasVerifiedTelegram  = $isMustVerify && $user->hasVerifiedTelegram();
             $hasRequiredDocuments = $user->scan_ktp !== null && $user->scan_kk !== null && $user->foto_selfie !== null;
 
-            // KUSTOM pendaftaran-mandiri: pendaftar tidak lagi verifikasi email/Telegram sendiri;
-            // akun yang sudah diaktifkan admin (aktif = 1) tidak dilempar ke halaman verifikasi.
-            if ($user->aktif) {
-                $hasRequiredDocuments = false;
-            }
-
             // Periksa jika pengguna belum verifikasi email atau telegram dan sudah memiliki dokumen yang diperlukan.
             if (! $hasVerifiedEmail && $hasRequiredDocuments) {
                 // Pengguna belum melakukan verifikasi email, arahkan ke halaman verifikasi email
