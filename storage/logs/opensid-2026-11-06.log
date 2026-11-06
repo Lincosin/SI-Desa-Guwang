@@ -2683,3 +2683,119 @@ Stack trace:
 #10 C:\xampp\htdocs\opensid\vendor\codeigniter\framework\system\core\CodeIgniter.php(519): Permohonan_surat_admin->__construct()
 #11 C:\xampp\htdocs\opensid\index.php(284): require_once('C:\\xampp\\htdocs...')
 #12 {main}  
+[2026-11-06 13:12:17] production.ERROR: Cannot initialise NetworkPrintConnector: Failed to parse address ""
+[2026-11-06 13:14:13] production.ERROR: Cannot initialise NetworkPrintConnector: Failed to parse address ""
+[2026-11-06 13:24:14] production.ERROR: Illuminate\Http\Client\RequestException: HTTP request returned status code 401:
+{
+    "message": "Token not provided"
+}
+ in C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\Response.php:272
+Stack trace:
+#0 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\Response.php(289): Illuminate\Http\Client\Response->toException()
+#1 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\PendingRequest.php(911): Illuminate\Http\Client\Response->throw(Object(Closure))
+#2 C:\xampp\htdocs\opensid\vendor\illuminate\support\helpers.php(320): Illuminate\Http\Client\PendingRequest->Illuminate\Http\Client\{closure}(Object(Illuminate\Http\Client\Response))
+#3 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\PendingRequest.php(894): tap(Object(Illuminate\Http\Client\Response), Object(Closure))
+#4 C:\xampp\htdocs\opensid\vendor\illuminate\support\helpers.php(261): Illuminate\Http\Client\PendingRequest->Illuminate\Http\Client\{closure}(1)
+#5 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\PendingRequest.php(892): retry(0, Object(Closure), 100, Object(Closure))
+#6 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\PendingRequest.php(798): Illuminate\Http\Client\PendingRequest->send('POST', 'https://layanan...', Array)
+#7 C:\xampp\htdocs\opensid\donjo-app\core\Admin_Controller.php(246) : eval()'d code(1) : eval()'d code(168): Illuminate\Http\Client\PendingRequest->post('https://layanan...')
+#8 C:\xampp\htdocs\opensid\donjo-app\core\Admin_Controller.php(246) : eval()'d code(1) : eval()'d code(82): Modules\Pelanggan\Services\PelangganService::perbaruiLangganan()
+#9 C:\xampp\htdocs\opensid\donjo-app\controllers\Permohonan_surat_admin.php(57): Admin_Controller->__construct()
+#10 C:\xampp\htdocs\opensid\vendor\codeigniter\framework\system\core\CodeIgniter.php(519): Permohonan_surat_admin->__construct()
+#11 C:\xampp\htdocs\opensid\index.php(284): require_once('C:\\xampp\\htdocs...')
+#12 {main}  
+[2026-11-06 13:24:15] production.ERROR: Illuminate\Http\Client\RequestException: HTTP request returned status code 401:
+{
+    "message": "Token not provided"
+}
+ in C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\Response.php:272
+Stack trace:
+#0 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\Response.php(289): Illuminate\Http\Client\Response->toException()
+#1 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\PendingRequest.php(911): Illuminate\Http\Client\Response->throw(Object(Closure))
+#2 C:\xampp\htdocs\opensid\vendor\illuminate\support\helpers.php(320): Illuminate\Http\Client\PendingRequest->Illuminate\Http\Client\{closure}(Object(Illuminate\Http\Client\Response))
+#3 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\PendingRequest.php(894): tap(Object(Illuminate\Http\Client\Response), Object(Closure))
+#4 C:\xampp\htdocs\opensid\vendor\illuminate\support\helpers.php(261): Illuminate\Http\Client\PendingRequest->Illuminate\Http\Client\{closure}(1)
+#5 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\PendingRequest.php(892): retry(0, Object(Closure), 100, Object(Closure))
+#6 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\PendingRequest.php(798): Illuminate\Http\Client\PendingRequest->send('POST', 'https://layanan...', Array)
+#7 C:\xampp\htdocs\opensid\donjo-app\core\Admin_Controller.php(246) : eval()'d code(1) : eval()'d code(168): Illuminate\Http\Client\PendingRequest->post('https://layanan...')
+#8 C:\xampp\htdocs\opensid\donjo-app\core\Admin_Controller.php(246) : eval()'d code(1) : eval()'d code(82): Modules\Pelanggan\Services\PelangganService::perbaruiLangganan()
+#9 C:\xampp\htdocs\opensid\donjo-app\controllers\Permohonan_surat_admin.php(57): Admin_Controller->__construct()
+#10 C:\xampp\htdocs\opensid\vendor\codeigniter\framework\system\core\CodeIgniter.php(519): Permohonan_surat_admin->__construct()
+#11 C:\xampp\htdocs\opensid\index.php(284): require_once('C:\\xampp\\htdocs...')
+#12 {main}  
+[2026-11-06 13:24:35] production.ERROR: Illuminate\Http\Client\RequestException: HTTP request returned status code 401:
+{
+    "message": "Token not provided"
+}
+ in C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\Response.php:272
+Stack trace:
+#0 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\Response.php(289): Illuminate\Http\Client\Response->toException()
+#1 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\PendingRequest.php(911): Illuminate\Http\Client\Response->throw(Object(Closure))
+#2 C:\xampp\htdocs\opensid\vendor\illuminate\support\helpers.php(320): Illuminate\Http\Client\PendingRequest->Illuminate\Http\Client\{closure}(Object(Illuminate\Http\Client\Response))
+#3 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\PendingRequest.php(894): tap(Object(Illuminate\Http\Client\Response), Object(Closure))
+#4 C:\xampp\htdocs\opensid\vendor\illuminate\support\helpers.php(261): Illuminate\Http\Client\PendingRequest->Illuminate\Http\Client\{closure}(1)
+#5 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\PendingRequest.php(892): retry(0, Object(Closure), 100, Object(Closure))
+#6 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\PendingRequest.php(798): Illuminate\Http\Client\PendingRequest->send('POST', 'https://layanan...', Array)
+#7 C:\xampp\htdocs\opensid\donjo-app\core\Admin_Controller.php(246) : eval()'d code(1) : eval()'d code(168): Illuminate\Http\Client\PendingRequest->post('https://layanan...')
+#8 C:\xampp\htdocs\opensid\donjo-app\core\Admin_Controller.php(246) : eval()'d code(1) : eval()'d code(82): Modules\Pelanggan\Services\PelangganService::perbaruiLangganan()
+#9 C:\xampp\htdocs\opensid\donjo-app\controllers\Keluar.php(72): Admin_Controller->__construct()
+#10 C:\xampp\htdocs\opensid\vendor\codeigniter\framework\system\core\CodeIgniter.php(519): Keluar->__construct()
+#11 C:\xampp\htdocs\opensid\index.php(284): require_once('C:\\xampp\\htdocs...')
+#12 {main}  
+[2026-11-06 13:24:36] production.ERROR: Illuminate\Http\Client\RequestException: HTTP request returned status code 401:
+{
+    "message": "Token not provided"
+}
+ in C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\Response.php:272
+Stack trace:
+#0 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\Response.php(289): Illuminate\Http\Client\Response->toException()
+#1 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\PendingRequest.php(911): Illuminate\Http\Client\Response->throw(Object(Closure))
+#2 C:\xampp\htdocs\opensid\vendor\illuminate\support\helpers.php(320): Illuminate\Http\Client\PendingRequest->Illuminate\Http\Client\{closure}(Object(Illuminate\Http\Client\Response))
+#3 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\PendingRequest.php(894): tap(Object(Illuminate\Http\Client\Response), Object(Closure))
+#4 C:\xampp\htdocs\opensid\vendor\illuminate\support\helpers.php(261): Illuminate\Http\Client\PendingRequest->Illuminate\Http\Client\{closure}(1)
+#5 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\PendingRequest.php(892): retry(0, Object(Closure), 100, Object(Closure))
+#6 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\PendingRequest.php(798): Illuminate\Http\Client\PendingRequest->send('POST', 'https://layanan...', Array)
+#7 C:\xampp\htdocs\opensid\donjo-app\core\Admin_Controller.php(246) : eval()'d code(1) : eval()'d code(168): Illuminate\Http\Client\PendingRequest->post('https://layanan...')
+#8 C:\xampp\htdocs\opensid\donjo-app\core\Admin_Controller.php(246) : eval()'d code(1) : eval()'d code(82): Modules\Pelanggan\Services\PelangganService::perbaruiLangganan()
+#9 C:\xampp\htdocs\opensid\donjo-app\controllers\Keluar.php(72): Admin_Controller->__construct()
+#10 C:\xampp\htdocs\opensid\vendor\codeigniter\framework\system\core\CodeIgniter.php(519): Keluar->__construct()
+#11 C:\xampp\htdocs\opensid\index.php(284): require_once('C:\\xampp\\htdocs...')
+#12 {main}  
+[2026-11-06 13:25:01] production.ERROR: Illuminate\Http\Client\RequestException: HTTP request returned status code 401:
+{
+    "message": "Token not provided"
+}
+ in C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\Response.php:272
+Stack trace:
+#0 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\Response.php(289): Illuminate\Http\Client\Response->toException()
+#1 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\PendingRequest.php(911): Illuminate\Http\Client\Response->throw(Object(Closure))
+#2 C:\xampp\htdocs\opensid\vendor\illuminate\support\helpers.php(320): Illuminate\Http\Client\PendingRequest->Illuminate\Http\Client\{closure}(Object(Illuminate\Http\Client\Response))
+#3 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\PendingRequest.php(894): tap(Object(Illuminate\Http\Client\Response), Object(Closure))
+#4 C:\xampp\htdocs\opensid\vendor\illuminate\support\helpers.php(261): Illuminate\Http\Client\PendingRequest->Illuminate\Http\Client\{closure}(1)
+#5 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\PendingRequest.php(892): retry(0, Object(Closure), 100, Object(Closure))
+#6 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\PendingRequest.php(798): Illuminate\Http\Client\PendingRequest->send('POST', 'https://layanan...', Array)
+#7 C:\xampp\htdocs\opensid\donjo-app\core\Admin_Controller.php(246) : eval()'d code(1) : eval()'d code(168): Illuminate\Http\Client\PendingRequest->post('https://layanan...')
+#8 C:\xampp\htdocs\opensid\donjo-app\core\Admin_Controller.php(246) : eval()'d code(1) : eval()'d code(82): Modules\Pelanggan\Services\PelangganService::perbaruiLangganan()
+#9 C:\xampp\htdocs\opensid\donjo-app\controllers\Man_user.php(62): Admin_Controller->__construct()
+#10 C:\xampp\htdocs\opensid\vendor\codeigniter\framework\system\core\CodeIgniter.php(519): Man_user->__construct()
+#11 C:\xampp\htdocs\opensid\index.php(284): require_once('C:\\xampp\\htdocs...')
+#12 {main}  
+[2026-11-06 13:25:03] production.ERROR: Illuminate\Http\Client\RequestException: HTTP request returned status code 401:
+{
+    "message": "Token not provided"
+}
+ in C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\Response.php:272
+Stack trace:
+#0 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\Response.php(289): Illuminate\Http\Client\Response->toException()
+#1 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\PendingRequest.php(911): Illuminate\Http\Client\Response->throw(Object(Closure))
+#2 C:\xampp\htdocs\opensid\vendor\illuminate\support\helpers.php(320): Illuminate\Http\Client\PendingRequest->Illuminate\Http\Client\{closure}(Object(Illuminate\Http\Client\Response))
+#3 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\PendingRequest.php(894): tap(Object(Illuminate\Http\Client\Response), Object(Closure))
+#4 C:\xampp\htdocs\opensid\vendor\illuminate\support\helpers.php(261): Illuminate\Http\Client\PendingRequest->Illuminate\Http\Client\{closure}(1)
+#5 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\PendingRequest.php(892): retry(0, Object(Closure), 100, Object(Closure))
+#6 C:\xampp\htdocs\opensid\vendor\illuminate\http\Client\PendingRequest.php(798): Illuminate\Http\Client\PendingRequest->send('POST', 'https://layanan...', Array)
+#7 C:\xampp\htdocs\opensid\donjo-app\core\Admin_Controller.php(246) : eval()'d code(1) : eval()'d code(168): Illuminate\Http\Client\PendingRequest->post('https://layanan...')
+#8 C:\xampp\htdocs\opensid\donjo-app\core\Admin_Controller.php(246) : eval()'d code(1) : eval()'d code(82): Modules\Pelanggan\Services\PelangganService::perbaruiLangganan()
+#9 C:\xampp\htdocs\opensid\donjo-app\controllers\Man_user.php(62): Admin_Controller->__construct()
+#10 C:\xampp\htdocs\opensid\vendor\codeigniter\framework\system\core\CodeIgniter.php(519): Man_user->__construct()
+#11 C:\xampp\htdocs\opensid\index.php(284): require_once('C:\\xampp\\htdocs...')
+#12 {main}  

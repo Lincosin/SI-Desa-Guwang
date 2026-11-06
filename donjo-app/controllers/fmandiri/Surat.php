@@ -603,7 +603,18 @@ class Surat extends Mandiri_Controller
                 'file_name'     => namafile($namaSyarat),
             ]);
 
-            if (! $this->upload->do_upload("syarat_file[{$idSyarat}]")) {
+            // KUSTOM unggah syarat: CodeIgniter tidak bisa membaca file dari kolom array (syarat_file[id]),
+            // jadi file dipindah dulu ke kolom tunggal syarat_file_{id}
+            $kolom          = 'syarat_file_' . $idSyarat;
+            $_FILES[$kolom] = [
+                'name'     => $_FILES['syarat_file']['name'][$idSyarat],
+                'type'     => $_FILES['syarat_file']['type'][$idSyarat],
+                'tmp_name' => $_FILES['syarat_file']['tmp_name'][$idSyarat],
+                'error'    => $_FILES['syarat_file']['error'][$idSyarat],
+                'size'     => $_FILES['syarat_file']['size'][$idSyarat],
+            ];
+
+            if (! $this->upload->do_upload($kolom)) {
                 foreach ($baru as $berkas) {
                     @unlink(LOKASI_DOKUMEN . $berkas);
                 }

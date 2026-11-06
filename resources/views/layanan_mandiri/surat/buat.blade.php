@@ -11,6 +11,12 @@
                 <input type="hidden" id="id_permohonan" name="id_permohonan" value="{{ $permohonan['id'] }}" />
             </div>
             <div class="box-body box-line">
+                {{-- KUSTOM unggah syarat: tampilkan pesan gagal unggah (tanpa id notifikasi supaya tidak hilang sendiri) --}}
+                @if (session('error'))
+                    <div class="alert alert-danger" role="alert">
+                        <i class="fa fa-exclamation-triangle"></i> {{ session('error') }}
+                    </div>
+                @endif
                 @if ($ajukan_ulang)
                     {{-- KUSTOM permohonan dibatalkan: form Ajukan Ulang terisi data permohonan lama --}}
                     <div class="alert alert-info" role="alert">
