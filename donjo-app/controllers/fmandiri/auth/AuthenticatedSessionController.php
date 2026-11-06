@@ -91,6 +91,10 @@ class AuthenticatedSessionController extends Web_Controller
      */
     public function createEktp()
     {
+        // KUSTOM nonaktif-login-ektp: login e-KTP dimatikan sampai desa punya card reader.
+        // Untuk mengaktifkan lagi, hapus baris return di bawah ini.
+        return redirect('layanan-mandiri/masuk');
+
         $macAddress = $this->input->get('mac_address', true);
         $token      = $this->input->get('token_layanan', true);
 
@@ -114,6 +118,12 @@ class AuthenticatedSessionController extends Web_Controller
     public function store()
     {
         $request = request();
+
+        // KUSTOM nonaktif-login-ektp: tolak kiriman login dengan tag e-KTP.
+        // Untuk mengaktifkan lagi, hapus blok if ini.
+        if (! $request->has('nik') && $request->has('tag_id_card')) {
+            redirect_with('error', 'Login dengan e-KTP sedang tidak tersedia. Silakan masuk dengan NIK.', ci_route('layanan-mandiri/masuk'));
+        }
 
         if ($request->has('nik') || ($request->has('tag_id_card') && $request->has('password'))) {
             if ($request->filled('anjungan_uuid')) {

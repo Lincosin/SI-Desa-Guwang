@@ -6,6 +6,8 @@
     $label = 'Tinjau Surat';
     $urlDaftar = ci_route('surat');
     $cetak = 'Cetak';
+    // KUSTOM: Kepala Dusun tidak mengunduh PDF saat Cetak, karena surat masih menunggu persetujuan Kades/Sekdes
+    $kadusTanpaUnduh = \App\Models\LogSurat::dusunKadusLogin() !== [] && (setting('verifikasi_kades') || setting('verifikasi_sekdes'));
 
     if ($urlSurat = old('url_surat')) {
         $cetak = 'Form Isian';
@@ -87,8 +89,9 @@
                 <i class="fa fa-gear"></i> Pengaturan
             </button>
             @if ($tolak != '-1')
-                <a href="{{ ci_route('keluar/masuk') }}" id="next" class="btn btn-social btn-info btn-sm btn-sm visible-xs-block visible-sm-inline-block visible-md-inline-block visible-lg-inline-block hide">
-                    ke Surat Menunggu Persetujuan <i class="fa fa-arrow-circle-right"></i>{{-- KUSTOM: dulu "ke Permohonan Surat" --}}
+                {{-- KUSTOM: Kepala Dusun kembali ke Permohonan Surat --}}
+                <a href="{{ $kadusTanpaUnduh ? ci_route('permohonan_surat_admin') : ci_route('keluar/masuk') }}" id="next" class="btn btn-social btn-info btn-sm btn-sm visible-xs-block visible-sm-inline-block visible-md-inline-block visible-lg-inline-block hide">
+                    {{ $kadusTanpaUnduh ? 'ke Permohonan Surat' : 'ke Surat Menunggu Persetujuan' }} <i class="fa fa-arrow-circle-right"></i>{{-- KUSTOM: dulu "ke Permohonan Surat" --}}
                 </a>
             @else
                 <a href="{{ ci_route('keluar/ditolak') }}" id="next" style="display:none" class="btn btn-social btn-info btn-sm btn-sm visible-xs-block visible-sm-inline-block visible-md-inline-block visible-lg-inline-block">
@@ -191,6 +194,9 @@
 @push('scripts')
     <script type="text/javascript">
         var ubah = `{{ $ubah ? '?ubah=1' : '' }}`;
+        // KUSTOM: Kepala Dusun tidak mengunduh PDF; surat langsung diteruskan untuk disetujui
+        var tanpaUnduh = @json($kadusTanpaUnduh);
+        var judulSelesai = @json($kadusTanpaUnduh ? 'Surat dikirim ke ' . setting('sebutan_kepala_desa') . ' untuk disetujui' : 'Surat Selesai Dibuat');
 
         function cetak_pdf() {
             tinymce.triggerSave();
@@ -210,6 +216,9 @@
                     },
                     data: $("#validasi").serialize(),
                     success: function(response, status, xhr) {
+                        if (tanpaUnduh) {
+                            return; // KUSTOM: tanpa unduhan untuk Kepala Dusun
+                        }
                         // https://stackoverflow.com/questions/34586671/download-pdf-file-using-jquery-ajax
                         var filename = "";
                         var disposition = xhr.getResponseHeader('Content-Disposition');
@@ -268,9 +277,9 @@
                         Swal.fire({
                             position: 'top-end',
                             icon: 'success',
-                            title: 'Surat Selesai Dibuat',
+                            title: judulSelesai, // KUSTOM: dulu 'Surat Selesai Dibuat'
                             showConfirmButton: false,
-                            timer: 1500
+                            timer: tanpaUnduh ? 3000 : 1500
                         })
                     }
                 })

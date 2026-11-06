@@ -26,11 +26,14 @@
         <div class="form-group">
             <button type="submit" class="btn btn-block bg-green"><b>MASUK</b></button>
         </div>
+        
+        <?php if(false): ?>
         <div class="form-group">
             <a href="<?php echo e(site_url('layanan-mandiri/masuk-ektp')); ?>">
                 <button type="button" class="btn btn-block bg-green"><b>MASUK DENGAN E-KTP</b></button>
             </a>
         </div>
+        <?php endif; ?>
         <div class="form-group">
             <a href="<?php echo e(site_url('layanan-mandiri/lupa-pin')); ?>">
                 <button type="button" class="btn btn-block bg-green"><b>LUPA PASSWORD</b></button>
