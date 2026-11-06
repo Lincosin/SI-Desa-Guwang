@@ -119,7 +119,8 @@ class KodeIsianSurat
                 'case_sentence' => true,
                 'judul'         => 'QRCode BSrE',
                 'isian'         => 'qr_bsre',
-                'data'          => setting('tte') && $this->dataSurat['surat']['qr_code_tte'] == 1 ? '[qr_bsre]' : '',
+                // KUSTOM tanda tangan Kades: tanpa TTE, tempat QR BSrE di blok tanda tangan diisi gambar tanda tangan Kades
+                'data' => setting('tte') && $this->dataSurat['surat']['qr_code_tte'] == 1 ? '[qr_bsre]' : (setting('tte') ? '' : '[ttd_kades]'),
             ],
             [
                 'case_sentence' => true,

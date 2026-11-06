@@ -268,7 +268,11 @@ class PermohonanSurat extends BaseModel
                 return 'Menunggu Persetujuan ' . $checker;
 
             case self::MENUNGGU_TANDA_TANGAN:
-                // KUSTOM verifikasi kadus: surat masih menunggu persetujuan Kepala Dusun di Arsip Layanan
+                // KUSTOM: surat ditolak dan sedang ditindaklanjuti Kepala Dusun
+                if ($logSurat && (int) $logSurat->verifikasi_operator === LogSurat::TOLAK) {
+                    return 'Diperbaiki ' . $checker;
+                }
+                // KUSTOM verifikasi kadus: surat masih menunggu persetujuan Kepala Dusun
                 if ($logSurat && $logSurat->verifikasi_kadus !== null && (int) $logSurat->verifikasi_kadus === 0) {
                     return 'Menunggu Persetujuan ' . $checker;
                 }
@@ -280,6 +284,9 @@ class PermohonanSurat extends BaseModel
 
             case self::SIAP_DIAMBIL:
                 return 'Disetujui ' . $approval;
+
+            case self::SUDAH_DIAMBIL:
+                return 'Selesai';
 
             default:
                 return $this->statusPermohonan;

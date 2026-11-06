@@ -301,7 +301,13 @@ class PendudukMandiri extends BaseModel implements AuthenticatableContract, Auth
         }
 
         if ($pin_baru1 !== $pin_baru2) {
-            return $this->withReponse(-1, 'Konfirmasi PIN baru tidak sesuai');
+            return $this->withReponse(-1, 'Konfirmasi password baru tidak sesuai');
+        }
+
+        // KUSTOM pendaftaran-mandiri: password bebas (huruf/angka/simbol), min. 6 karakter.
+        // bilangan() dihapus di bawah agar huruf tidak dibuang (PIN angka lama tetap cocok).
+        if (mb_strlen((string) $pin_baru2) < 6 || mb_strlen((string) $pin_baru2) > 50) {
+            return $this->withReponse(-1, 'Password baru harus 6 sampai 50 karakter');
         }
 
         $pengguna = PendudukMandiri::where('id_pend', $id_pend)->first();
@@ -309,15 +315,15 @@ class PendudukMandiri extends BaseModel implements AuthenticatableContract, Auth
             return $this->withReponse(-1, 'Pengguna tidak ditemukan');
         }
 
-        if (! Hash::check(bilangan($pin_lama), $pengguna->pin)) {
-            return $this->withReponse(-1, 'PIN gagal diganti, <b>PIN Lama</b> yang Anda masukkan tidak sesuai');
+        if (! Hash::check((string) $pin_lama, $pengguna->pin)) {
+            return $this->withReponse(-1, 'Password gagal diganti, <b>Password Lama</b> yang Anda masukkan tidak sesuai');
         }
 
-        if (Hash::check(bilangan($pin_baru2), $pengguna->pin)) {
-            return $this->withReponse(-1, '<b>PIN</b> gagal diganti, Silakan ganti <b>PIN Lama</b> Anda dengan <b>PIN Baru</b>');
+        if (Hash::check((string) $pin_baru2, $pengguna->pin)) {
+            return $this->withReponse(-1, '<b>Password</b> gagal diganti, password baru tidak boleh sama dengan password lama');
         }
 
-        $pin_baru_hashed = Hash::make(bilangan($pin_baru2));
+        $pin_baru_hashed = Hash::make((string) $pin_baru2);
 
         $updateData = [
             'pin'        => $pin_baru_hashed,
@@ -333,7 +339,7 @@ class PendudukMandiri extends BaseModel implements AuthenticatableContract, Auth
                     $otp->driver('telegram')->kirimPinBaru($pengguna->telegram, $pin_baru2, $nama);
                     PendudukMandiri::where('id_pend', $id_pend)->update($updateData);
 
-                    return $this->withReponse(1, 'PIN Baru sudah dikirim ke Akun Telegram Anda', $logoutUrl);
+                    return $this->withReponse(1, 'Password berhasil diganti dan sudah dikirim ke Akun Telegram Anda', $logoutUrl);
                 } catch (Exception $e) {
                     logger()->error($e);
 
@@ -347,7 +353,7 @@ class PendudukMandiri extends BaseModel implements AuthenticatableContract, Auth
                     $otp->driver('email')->kirimPinBaru($pengguna->email, $pin_baru2, $nama);
                     PendudukMandiri::where('id_pend', $id_pend)->update($updateData);
 
-                    return $this->withReponse(1, 'PIN Baru sudah dikirim ke Akun Email Anda', $logoutUrl);
+                    return $this->withReponse(1, 'Password berhasil diganti dan sudah dikirim ke Akun Email Anda', $logoutUrl);
                 } catch (Exception $e) {
                     logger()->error($e);
 
@@ -361,7 +367,7 @@ class PendudukMandiri extends BaseModel implements AuthenticatableContract, Auth
 
                 return $this->withReponse(
                     1,
-                    'PIN berhasil diganti, silakan masuk kembali dengan Kode PIN : ' . $pin_baru2,
+                    'Password berhasil diganti, silakan masuk kembali dengan password baru Anda.',
                     $logoutUrl
                 );
         }

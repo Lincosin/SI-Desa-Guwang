@@ -292,6 +292,117 @@ body.login::before {
 .login .login-footer-bottom a { font-size: 12.5px; font-weight: 600; color: var(--smd-muted); }
 .login .login-footer-bottom a:hover { color: var(--smd-600); }
 
+/* ---------- KUSTOM pendaftaran-mandiri: ajakan daftar & formulir daftar ---------- */
+.login .smd-daftar {
+  margin-top: 6px !important;
+  padding-top: 16px;
+  border-top: 1px dashed var(--smd-border);
+}
+.login .smd-daftar__teks {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--smd-muted);
+}
+.login .form-bottom form button.btn.smd-daftar__tombol {
+  border-color: transparent;
+  background: linear-gradient(135deg, #0ea5a4, #0f8f8e 50%, #0b7a79);
+  color: #fff;
+  box-shadow: 0 12px 26px rgba(14, 165, 164, .3);
+}
+.login .form-bottom form button.btn.smd-daftar__tombol:hover,
+.login .form-bottom form button.btn.smd-daftar__tombol:focus {
+  border-color: transparent;
+  background: linear-gradient(135deg, #14b8b7, #0ea5a4 50%, #0f8f8e);
+  color: #fff;
+}
+.login .smd-form-daftar { text-align: left; }
+.login .smd-daftar__judul { margin: 0 0 6px; text-align: center; font-size: 18px; }
+.login .smd-daftar__petunjuk {
+  margin: 0 0 18px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--smd-muted);
+}
+.login .smd-daftar__label {
+  display: block;
+  margin: 0 0 6px 4px;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: var(--smd-muted);
+}
+/* Tanggal lahir: ikon kalender + kalender pilih tanggal bergaya Samudra */
+.login .form-bottom .smd-tgl { position: relative; }
+.login .form-bottom .form-login input#daftar_tgl_lahir {
+  padding-left: 46px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='16' rx='2'/%3E%3Cpath d='M16 3v4M8 3v4M3 10h18'/%3E%3C/svg%3E");
+}
+.login .bootstrap-datetimepicker-widget.dropdown-menu {
+  width: 300px;
+  padding: 10px;
+  border: 1px solid var(--smd-border);
+  border-radius: 16px;
+  box-shadow: 0 18px 40px rgba(5, 15, 40, .25);
+  font-family: var(--smd-font);
+  z-index: 50;
+}
+.login .bootstrap-datetimepicker-widget table td,
+.login .bootstrap-datetimepicker-widget table th { border-radius: 10px; color: var(--smd-text); }
+.login .bootstrap-datetimepicker-widget table td span { border-radius: 10px; }
+.login .bootstrap-datetimepicker-widget table td.day:hover,
+.login .bootstrap-datetimepicker-widget table td span:hover,
+.login .bootstrap-datetimepicker-widget table thead tr:first-child th:hover { background: var(--smd-50); }
+.login .bootstrap-datetimepicker-widget table td.active,
+.login .bootstrap-datetimepicker-widget table td span.active,
+.login .bootstrap-datetimepicker-widget table td.active:hover { background: var(--smd-600); color: #fff; text-shadow: none; }
+.login .bootstrap-datetimepicker-widget table td.today:before { border-bottom-color: var(--smd-500); }
+.login .bootstrap-datetimepicker-widget table td.disabled,
+.login .bootstrap-datetimepicker-widget table td span.disabled { color: #c3cddc; }
+.login .bootstrap-datetimepicker-widget table th.picker-switch { font-weight: 700; color: var(--smd-800); }
+.login .smd-unggah {
+  margin: 4px 0 16px;
+  padding: 14px 14px 10px;
+  border: 1.5px dashed var(--smd-200);
+  border-radius: 16px;
+  background: var(--smd-50);
+}
+.login .smd-unggah .form-group { margin-bottom: 12px; }
+.login .smd-unggah input[type="file"].form-control {
+  height: auto;
+  padding: 9px 10px;
+  background: #fff;
+  font-size: 13px;
+}
+.login .smd-unggah input[type="file"]::file-selector-button {
+  margin-right: 10px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--smd-100);
+  color: var(--smd-700);
+  font-family: var(--smd-font);
+  font-weight: 700;
+  cursor: pointer;
+}
+.login .smd-daftar__catatan { display: block; font-size: 12px; line-height: 1.5; color: var(--smd-muted); }
+.login label.error, .login .smd-form-daftar label.error {
+  display: block;
+  margin: 5px 0 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #b91c1c;
+  text-align: left;
+}
+.login .alert-success { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; }
+.login .alert-warning { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+.login .alert h4 { margin: 0 0 4px; font-size: 14px; font-weight: 700; }
+.login .alert ul { margin: 0; padding-left: 18px; }
+.login .alert .close { opacity: .5; }
+
 /* ---------- Layar lebar: dua kolom ---------- */
 @media screen and (min-width: 768px) {
   .login .top-content .inner-bg { padding: 48px 0; }

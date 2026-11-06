@@ -1,7 +1,8 @@
 @extends('layanan_mandiri.auth.index')
 
 @section('content')
-    @include('admin.layouts.components.notifikasi')
+    {{-- KUSTOM pendaftaran-mandiri: galat validasi sudah ditampilkan oleh layout, jangan diulang di sini --}}
+    @include('admin.layouts.components.notifikasi', ['errors' => new \Illuminate\Support\ViewErrorBag()])
     
     <form id="validasi" autocomplete="off" action="{{ $form_action }}" method="post" class="login-form">
         <div class="form-group form-login">
@@ -10,18 +11,19 @@
         {{-- Hidden input for UUID from local storage --}}
         <input type="hidden" name="anjungan_uuid" id="anjungan_uuid">
         <div class="form-group form-login">
+            {{-- KUSTOM pendaftaran-mandiri: password bebas (akun lama dengan PIN angka tetap bisa) --}}
             <input
                 type="password"
                 autocomplete="off"
-                class="form-control angka required {!! jecho($cek_anjungan['keyboard'] == 1, true, 'kbvnumber') !!}"
+                class="form-control required {!! jecho($cek_anjungan['keyboard'] == 1, true, 'kbvtext') !!}"
                 name="password"
-                placeholder="PIN"
+                placeholder="Password"
                 id="pin"
-                maxlength="6"
+                maxlength="50"
             >
         </div>
         <div class="form-group">
-            <center><input type="checkbox" id="checkbox" style="display: initial;"> <label for="checkbox">Tampilkan PIN</label></center>
+            <center><input type="checkbox" id="checkbox" style="display: initial;"> <label for="checkbox">Tampilkan Password</label></center>
         </div>
         <div class="form-group">
             <button type="submit" class="btn btn-block bg-green"><b>MASUK</b></button>
@@ -31,18 +33,20 @@
                 <button type="button" class="btn btn-block bg-green"><b>MASUK DENGAN E-KTP</b></button>
             </a>
         </div>
+        <div class="form-group">
+            <a href="{{ site_url('layanan-mandiri/lupa-pin') }}">
+                <button type="button" class="btn btn-block bg-green"><b>LUPA PASSWORD</b></button>
+            </a>
+        </div>
+        {{-- KUSTOM pendaftaran-mandiri: ajakan daftar untuk warga yang belum punya akun --}}
         @if (setting('tampilkan_pendaftaran'))
-            <div class="form-group">
+            <div class="form-group smd-daftar">
+                <span class="smd-daftar__teks">Belum punya akun?</span>
                 <a href="{{ site_url('layanan-mandiri/daftar') }}">
-                    <button type="button" class="btn btn-block bg-green"><b>DAFTAR</b></button>
+                    <button type="button" class="btn btn-block bg-green smd-daftar__tombol"><b>DAFTAR AKUN BARU</b></button>
                 </a>
             </div>
         @endif
-        <div class="form-group">
-            <a href="{{ site_url('layanan-mandiri/lupa-pin') }}">
-                <button type="button" class="btn btn-block bg-green"><b>LUPA PIN</b></button>
-            </a>
-        </div>
         @if (in_array(\Modules\Anjungan\Models\Anjungan::ANJUNGAN, $cek_anjungan['tipe'] ?? []))
             <div class="form-group">
                 <a href="<?= route('anjungan.index') ?>">

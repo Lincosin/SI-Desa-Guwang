@@ -88,7 +88,7 @@
             </button>
             @if ($tolak != '-1')
                 <a href="{{ ci_route('keluar/masuk') }}" id="next" class="btn btn-social btn-info btn-sm btn-sm visible-xs-block visible-sm-inline-block visible-md-inline-block visible-lg-inline-block hide">
-                    ke Permohonan Surat <i class="fa fa-arrow-circle-right"></i>
+                    ke Surat Menunggu Persetujuan <i class="fa fa-arrow-circle-right"></i>{{-- KUSTOM: dulu "ke Permohonan Surat" --}}
                 </a>
             @else
                 <a href="{{ ci_route('keluar/ditolak') }}" id="next" style="display:none" class="btn btn-social btn-info btn-sm btn-sm visible-xs-block visible-sm-inline-block visible-md-inline-block visible-lg-inline-block">

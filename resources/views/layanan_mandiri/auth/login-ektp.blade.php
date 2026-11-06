@@ -24,7 +24,7 @@
         </div>
         @if (!$cek_anjungan)
             <div class="form-group form-login">
-                <input type="password" class="form-control required number" name="password" placeholder="Masukan PIN" autocomplete="off" maxlength="6">
+                <input type="password" class="form-control required" name="password" placeholder="Masukkan Password" autocomplete="off" maxlength="50">
             </div>
             <div class="form-group">
                 <button type="submit" class="btn btn-block bg-green"><b>MASUK</b></button>
@@ -35,18 +35,20 @@
                 <button type="button" class="btn btn-block bg-green"><b>MASUK DENGAN NIK</b></button>
             </a>
         </div>
+        <div class="form-group">
+            <a href="{{ site_url('layanan-mandiri/lupa-pin') }}">
+                <button type="button" class="btn btn-block bg-green"><b>LUPA PASSWORD</b></button>
+            </a>
+        </div>
+        {{-- KUSTOM pendaftaran-mandiri --}}
         @if (setting('tampilkan_pendaftaran'))
-            <div class="form-group">
+            <div class="form-group smd-daftar">
+                <span class="smd-daftar__teks">Belum punya akun?</span>
                 <a href="{{ site_url('layanan-mandiri/daftar') }}">
-                    <button type="button" class="btn btn-block bg-green"><b>DAFTAR</b></button>
+                    <button type="button" class="btn btn-block bg-green smd-daftar__tombol"><b>DAFTAR AKUN BARU</b></button>
                 </a>
             </div>
         @endif
-        <div class="form-group">
-            <a href="{{ site_url('layanan-mandiri/lupa-pin') }}">
-                <button type="button" class="btn btn-block bg-green"><b>LUPA PIN</b></button>
-            </a>
-        </div>
         @if (in_array(\Modules\Anjungan\Models\Anjungan::ANJUNGAN, $cek_anjungan['tipe'] ?? []))
             <div class="form-group">
                 <a href="{{ route('anjungan.index') }}">

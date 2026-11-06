@@ -685,6 +685,7 @@ Route::group('permohonan_surat_admin', static function (): void {
     Route::get('/tampilkan/{id_dokumen?}/{id_pend?}', 'Permohonan_surat_admin@tampilkan')->name('permohonan_surat_admin.tampilkan');
     Route::get('/unduh_berkas/{id_dokumen?}/{id_pend?}/{tampil?}', 'Permohonan_surat_admin@unduh_berkas')->name('permohonan_surat_admin.unduh_berkas');
     Route::get('/tampilkan_berkas/{id_dokumen?}/{id_pend?}', 'Permohonan_surat_admin@tampilkan_berkas')->name('permohonan_surat_admin.tampilkan_berkas');
+    Route::post('/ttd_kades', 'Permohonan_surat_admin@ttd_kades')->name('permohonan_surat_admin.ttd_kades'); // KUSTOM tanda tangan Kades
 });
 
 // Layanan Surat > Arsip Layanan

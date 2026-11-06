@@ -655,6 +655,74 @@ class LogSurat extends BaseModel
     }
 
     /**
+     * KUSTOM: apakah surat ini dibuat dari permohonan warga (Layanan Mandiri). Dicocokkan seperti
+     * PermohonanSurat::logSuratTerkait(): jenis surat, pemohon dan nomor surat.
+     * Surat permohonan warga diperiksa dan disetujui dari daftar Permohonan Surat.
+     */
+    public function dariPermohonanWarga(): bool
+    {
+        return $this->id_pend && PermohonanSurat::where('id_surat', $this->id_format_surat)
+            ->where('id_pemohon', $this->id_pend)
+            ->where('isian_form->nomor', $this->no_surat)
+            ->exists();
+    }
+
+    /**
+     * KUSTOM tanda tangan Kades: gambar tanda tangan Kepala Desa (data URI PNG) untuk kode [ttd_kades],
+     * null jika belum diunggah. Disimpan sebagai satu baris pengaturan (setting_aplikasi, key ttd_kades),
+     * tanpa berkas atau tabel baru.
+     */
+    public static function gambarTtdKades(): ?string
+    {
+        $nilai = DB::table('setting_aplikasi')->where('config_id', identitas('id'))->where('key', 'ttd_kades')->value('value');
+
+        return $nilai && str_starts_with($nilai, 'data:image/') ? $nilai : null;
+    }
+
+    /**
+     * KUSTOM tanda tangan Kades: simpan (atau hapus bila null) gambar tanda tangan Kepala Desa.
+     */
+    public static function simpanTtdKades(?string $dataUri): void
+    {
+        DB::table('setting_aplikasi')->updateOrInsert(
+            ['config_id' => identitas('id'), 'key' => 'ttd_kades'],
+            [
+                'judul'      => 'Tanda Tangan Kepala Desa',
+                'value'      => $dataUri,
+                'keterangan' => 'Gambar tanda tangan untuk kode [ttd_kades] di template surat',
+                'jenis'      => 'hidden',
+                'kategori'   => 'ttd_surat',
+            ]
+        );
+    }
+
+    /**
+     * KUSTOM tanda tangan Kades: surat sudah disetujui Kepala Desa dan ditandatangani atas nama Kepala Desa
+     * sendiri (bukan a.n./u.b. pejabat lain), sehingga gambar tanda tangan Kades boleh tampil.
+     */
+    public function ditandatanganiKades(): bool
+    {
+        if ($this->deleted_at !== null || $this->verifikasi_operator == self::TOLAK) {
+            return false;
+        }
+
+        $kades = Pamong::kepalaDesa()->first();
+        if ($kades && $this->id_pamong && (int) $this->id_pamong !== (int) $kades->pamong_id) {
+            return false;
+        }
+
+        return setting('verifikasi_kades') ? $this->verifikasi_kades == self::TERIMA : $this->sudahDisetujui();
+    }
+
+    /**
+     * KUSTOM: alasan penolakan terakhir surat ini.
+     */
+    public function alasanTolakTerakhir(): ?string
+    {
+        return $this->tolak->sortByDesc('id')->first()->keterangan ?? null;
+    }
+
+    /**
      * Cek apakah surat sudah melewati seluruh tahap verifikasi
      * (operator/kadus -> sekdes -> kades -> TTE sesuai pengaturan),
      * sehingga PDF boleh diunduh oleh pemohon di layanan mandiri.
@@ -699,5 +767,230 @@ class LogSurat extends BaseModel
         $input = json_decode((string) ($this->attributes['input'] ?? null), true);
 
         return $input['keperluan'] ?? $input['keterangan'] ?? null;
+    }
+
+    /**
+     * KUSTOM notifikasi WhatsApp (WhatsApp Business Platform / Meta Cloud API resmi).
+     * Pengaturan disimpan sebagai baris setting_aplikasi (kategori whatsapp), tanpa berkas atau tabel baru:
+     * wa_token, wa_phone_number_id, wa_template_kadus, wa_template_kades, wa_bahasa, wa_versi_api.
+     * Selama wa_token atau wa_phone_number_id kosong, tidak ada pesan yang dikirim.
+     */
+    public static function settingWa(string $key, ?string $default = null): ?string
+    {
+        try {
+            $nilai = DB::table('setting_aplikasi')->where('config_id', identitas('id'))->where('key', $key)->value('value');
+        } catch (\Throwable $e) {
+            return $default;
+        }
+
+        return ($nilai === null || trim((string) $nilai) === '') ? $default : trim((string) $nilai);
+    }
+
+    public static function waAktif(): bool
+    {
+        return self::settingWa('wa_token') && self::settingWa('wa_phone_number_id');
+    }
+
+    /**
+     * KUSTOM notifikasi WhatsApp: ubah nomor HP ke format internasional tanpa tanda + (08xx -> 628xx).
+     */
+    public static function nomorWa($nomor): ?string
+    {
+        $nomor = preg_replace('/\D/', '', (string) $nomor);
+        if ($nomor === '') {
+            return null;
+        }
+        if (str_starts_with($nomor, '0')) {
+            $nomor = '62' . substr($nomor, 1);
+        } elseif (str_starts_with($nomor, '8')) {
+            $nomor = '62' . $nomor;
+        }
+
+        return strlen($nomor) >= 10 ? $nomor : null;
+    }
+
+    /**
+     * KUSTOM notifikasi WhatsApp: nomor WA pengguna admin. Diambil dari kolom Nomor HP akun pengguna,
+     * atau bila kosong dari nomor telepon data penduduk pamong yang tertaut ke akun itu.
+     */
+    public static function nomorWaPengguna($user): ?string
+    {
+        $nomor = self::nomorWa($user->phone ?? null);
+        if (! $nomor && ($idPend = $user->pamong->id_pend ?? null)) {
+            $nomor = self::nomorWa(DB::table('tweb_penduduk')->where('id', $idPend)->value('telepon'));
+        }
+
+        return $nomor;
+    }
+
+    /**
+     * KUSTOM notifikasi WhatsApp: kirim satu pesan template. Tidak pernah melempar error;
+     * kegagalan dicatat di storage/logs agar proses surat tetap berjalan.
+     */
+    public static function kirimWa(string $nomor, string $template, array $parameter): bool
+    {
+        $token   = self::settingWa('wa_token');
+        $idNomor = self::settingWa('wa_phone_number_id');
+        if (! $token || ! $idNomor || ! function_exists('curl_init')) {
+            return false;
+        }
+
+        $url  = 'https://graph.facebook.com/' . self::settingWa('wa_versi_api', 'v23.0') . '/' . rawurlencode($idNomor) . '/messages';
+        $body = [
+            'messaging_product' => 'whatsapp',
+            'to'                => $nomor,
+            'type'              => 'template',
+            'template'          => [
+                'name'       => $template,
+                'language'   => ['code' => self::settingWa('wa_bahasa', 'id')],
+                'components' => [[
+                    'type'       => 'body',
+                    'parameters' => array_map(static function ($teks): array {
+                        // Parameter template tidak boleh kosong, berisi baris baru/tab, atau spasi beruntun
+                        $teks = trim(preg_replace('/\s+/', ' ', (string) $teks));
+
+                        return ['type' => 'text', 'text' => $teks === '' ? '-' : mb_substr($teks, 0, 200)];
+                    }, array_values($parameter)),
+                ]],
+            ],
+        ];
+
+        try {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_POST           => true,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_CONNECTTIMEOUT => 5,
+                CURLOPT_TIMEOUT        => 10,
+                CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $token, 'Content-Type: application/json'],
+                CURLOPT_POSTFIELDS     => json_encode($body),
+            ]);
+            // PHP di XAMPP Windows sering belum diberi daftar sertifikat CA -> pakai bawaan XAMPP bila ada
+            if (! ini_get('curl.cainfo') && ! ini_get('openssl.cafile')) {
+                $akarXampp = dirname(PHP_BINARY, 2);
+                foreach ([$akarXampp . '/apache/bin/curl-ca-bundle.crt', $akarXampp . '/php/extras/ssl/cacert.pem'] as $ca) {
+                    if (is_file($ca)) {
+                        curl_setopt($ch, CURLOPT_CAINFO, $ca);
+                        break;
+                    }
+                }
+            }
+            $hasil = curl_exec($ch);
+            $kode  = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $galat = curl_error($ch);
+            curl_close($ch);
+        } catch (\Throwable $e) {
+            log_message('error', 'WhatsApp gagal ke ' . $nomor . ' (' . $template . '): ' . $e->getMessage());
+
+            return false;
+        }
+
+        if ($kode >= 200 && $kode < 300) {
+            log_message('notice', 'WhatsApp terkirim ke ' . $nomor . ' (' . $template . ')');
+
+            return true;
+        }
+
+        log_message('error', 'WhatsApp gagal ke ' . $nomor . ' (' . $template . '): HTTP ' . $kode . ' ' . ($galat ?: $hasil));
+
+        return false;
+    }
+
+    /**
+     * KUSTOM notifikasi WhatsApp: kirim ke beberapa akun pengguna, sekali per nomor.
+     * Isi template (3 variabel): {{1}} jenis surat, {{2}} nama pemohon, {{3}} dusun pemohon.
+     */
+    private static function kirimWaKePengguna($daftarUser, string $template, array $parameter): void
+    {
+        $terkirim = [];
+        $idLogin  = get_instance()->session->isAdmin->id ?? null; // tidak mengirim WA ke diri sendiri
+        foreach ($daftarUser as $user) {
+            if ($idLogin && (int) $user->id === (int) $idLogin) {
+                continue;
+            }
+            $nomor = self::nomorWaPengguna($user);
+            if (! $nomor) {
+                log_message('error', 'WhatsApp: akun ' . ($user->username ?? $user->id) . ' belum punya Nomor HP');
+
+                continue;
+            }
+            if (isset($terkirim[$nomor])) {
+                continue;
+            }
+            $terkirim[$nomor] = true;
+            self::kirimWa($nomor, $template, $parameter);
+        }
+    }
+
+    /**
+     * KUSTOM notifikasi WhatsApp: warga mengajukan (atau melengkapi) permohonan surat di Layanan Mandiri
+     * -> Kepala Dusun pemohon menerima WA.
+     */
+    public static function waPermohonanBaru($idPend, ?string $namaSurat): void
+    {
+        if (! self::waAktif()) {
+            return;
+        }
+
+        try {
+            $nama = DB::table('tweb_penduduk')->where('id', $idPend)->value('nama');
+            self::kirimWaKePengguna(
+                self::penggunaKadus($idPend),
+                self::settingWa('wa_template_kadus', 'permohonan_surat_kadus'),
+                [$namaSurat, $nama, self::dusunPenduduk($idPend)]
+            );
+        } catch (\Throwable $e) {
+            log_message('error', 'WhatsApp permohonan baru gagal: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * KUSTOM notifikasi WhatsApp: surat berpindah ke tahap pemeriksa berikutnya
+     * (Kadus -> Sekdes/Kades) -> pemeriksa tahap itu menerima WA.
+     */
+    public static function waTahapBerikut($idLogSurat): void
+    {
+        if (! self::waAktif() || ! $idLogSurat) {
+            return;
+        }
+
+        try {
+            $surat = self::with(['formatSurat'])->find($idLogSurat);
+            if (! $surat || (int) $surat->verifikasi_operator !== self::TERIMA) {
+                return;
+            }
+
+            $menunggu = static fn ($kolom): bool => $surat->{$kolom} !== null && (int) $surat->{$kolom} === 0;
+
+            if ($menunggu('verifikasi_kadus')) {
+                $tahap    = 'kadus';
+                $penerima = self::penggunaKadus($surat->id_pend);
+                $template = self::settingWa('wa_template_kadus', 'permohonan_surat_kadus');
+            } elseif ($menunggu('verifikasi_sekdes')) {
+                $tahap    = 'sekdes';
+                $penerima = User::where('active', 1)->whereHas('pamong', static fn ($q) => $q->where('jabatan_id', sekdes()->id))->get();
+                $template = self::settingWa('wa_template_kades', 'surat_menunggu_kades');
+            } elseif ($menunggu('verifikasi_kades')) {
+                $tahap    = 'kades';
+                $penerima = User::where('active', 1)->whereHas('pamong', static fn ($q) => $q->where('jabatan_id', kades()->id))->get();
+                $template = self::settingWa('wa_template_kades', 'surat_menunggu_kades');
+            } else {
+                return;
+            }
+
+            // Cegah WA ganda bila tombol kirim/cetak ditekan dua kali
+            try {
+                if (! cache()->add('wa_surat_' . $surat->id . '_' . $tahap, 1, 120)) {
+                    return;
+                }
+            } catch (\Throwable $e) {
+                // cache tidak tersedia: tetap kirim
+            }
+
+            $nama = DB::table('tweb_penduduk')->where('id', $surat->id_pend)->value('nama');
+            self::kirimWaKePengguna($penerima, $template, [$surat->formatSurat->nama ?? 'Surat', $nama, self::dusunPenduduk($surat->id_pend)]);
+        } catch (\Throwable $e) {
+            log_message('error', 'WhatsApp tahap berikut gagal: ' . $e->getMessage());
+        }
     }
 }

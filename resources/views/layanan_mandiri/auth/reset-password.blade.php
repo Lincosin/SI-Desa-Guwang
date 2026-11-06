@@ -16,11 +16,11 @@
             <input
                 name="pin"
                 type="password"
-                placeholder="Password"
+                placeholder="Password Baru (min. 6 karakter)"
                 autocomplete="off"
                 class="form-control required"
                 minlength="6"
-                maxlength="6"
+                maxlength="50"
             >
         </div>
         <div class="form-group">
@@ -31,7 +31,7 @@
                 autocomplete="off"
                 class="form-control required"
                 minlength="6"
-                maxlength="6"
+                maxlength="50"
             >
         </div>
         <div class="form-group">

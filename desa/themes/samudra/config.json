@@ -78,6 +78,32 @@
         "group": "Tampilan"
     },
     {
+        "judul": "Bagian Potensi Desa",
+        "key": "tampilkan_potensi",
+        "value": "1",
+        "type": "select",
+        "keterangan": "Tampilkan kartu Potensi [desa] di beranda (diambil dari artikel pada kategori potensi dan sub-kategorinya)",
+        "options": {
+            "1": "Ya",
+            "0": "Tidak"
+        },
+        "attributes": {
+            "class": "select2"
+        },
+        "readonly": false,
+        "group": "Tampilan"
+    },
+    {
+        "judul": "Slug Kategori Potensi",
+        "key": "kategori_potensi",
+        "value": "potensi-desa",
+        "type": "input-text",
+        "keterangan": "Slug kategori artikel yang berisi potensi [desa], misalnya potensi-desa",
+        "options": null,
+        "readonly": false,
+        "group": "Tampilan"
+    },
+    {
         "judul": "Pertanyaan Umum (FAQ)",
         "key": "tampilkan_faq",
         "value": "1",

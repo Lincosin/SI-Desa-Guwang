@@ -12,7 +12,7 @@
         <button type="button" id="cetak-surat" onclick="tambah_elemen_cetak('cetak_pdf');" class="btn btn-social btn-info btn-sm pull-right" style="margin-right: 5px;"><i class="fa fa-file-word-o"></i> Lanjutkan Cetak</button>
     @endif
     <a href="{{ ci_route('keluar.masuk') }}" id="next" class="btn btn-social btn-info btn-sm btn-sm pull-right visible-xs-block visible-sm-inline-block visible-md-inline-block visible-lg-inline-block" style="display: none !important;">
-        ke Permohonan Surat<i class="fa fa-arrow-circle-right"></i></a>
+        ke Surat Menunggu Persetujuan<i class="fa fa-arrow-circle-right"></i></a>{{-- KUSTOM: dulu "ke Permohonan Surat" --}}
 </div>
 <script type="text/javascript">
     function tambah_elemen_cetak($nilai) {

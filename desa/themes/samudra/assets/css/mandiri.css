@@ -40,6 +40,12 @@ body.skin-blue {
   -webkit-font-smoothing: antialiased;
 }
 .skin-blue .wrapper { background: var(--smd-bg); }
+/* AdminLTE mengunci tinggi html, body, dan .wrapper (100%, overflow tersembunyi) sampai seluruh
+   halaman selesai dimuat, sehingga halaman belum bisa digulir selama memuat. Tinggi otomatis di sini
+   sama dengan yang dipasang AdminLTE setelah halaman selesai dimuat, hanya lebih awal. */
+html,
+body.skin-blue.layout-top-nav,
+body.skin-blue.layout-top-nav > .wrapper { height: auto; }
 .skin-blue a { color: var(--smd-primary); }
 .skin-blue a:hover, .skin-blue a:focus { color: var(--smd-700); }
 .skin-blue :focus-visible { outline: 3px solid var(--smd-400); outline-offset: 2px; }
@@ -485,6 +491,149 @@ table.dataTable thead .sorting::after,
 table.dataTable thead .sorting_asc::after,
 table.dataTable thead .sorting_desc::after { opacity: .45; color: var(--smd-primary); }
 
+/* Tabel jadi kartu.
+   Tabel berkolom banyak (Permohonan Surat, Arsip Surat, Pesan, dll.) terpotong di layar sempit.
+   Skrip di partials/layanan_mandiri.blade.php memberi label tiap sel dari judul kolomnya, lalu
+   menambah kelas smd-kartu--aktif bila layar di bawah 768px atau tabel lebih lebar dari kotaknya.
+   Saat itu setiap baris tampil sebagai kartu: judul di atas, rincian berlabel di tengah, tombol
+   aksi di bawah. Bila tabel muat, tampilannya tetap tabel biasa. */
+.skin-blue .content-wrapper .table-responsive:has(table.smd-kartu--aktif) { overflow: visible; margin-bottom: 0; }
+.skin-blue .content-wrapper table.smd-kartu--aktif {
+  display: block;
+  width: 100% !important;
+  border: 0 !important;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
+  margin: 4px 0 8px !important;
+}
+.skin-blue .content-wrapper table.smd-kartu--aktif > thead { display: none; }
+.skin-blue .content-wrapper table.smd-kartu--aktif > tbody {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.skin-blue .content-wrapper table.smd-kartu--aktif > tbody > tr {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 14px 16px 12px;
+  border: 1px solid var(--smd-border);
+  border-radius: 16px;
+  background: #fff !important;
+  box-shadow: 0 1px 2px rgba(15, 61, 134, .05), 0 8px 20px rgba(15, 61, 134, .07);
+}
+.skin-blue .content-wrapper table.smd-kartu--aktif > tbody > tr > td {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  width: auto !important;
+  min-height: 0;
+  padding: 8px 0 !important;
+  border: 0 !important;
+  border-top: 1px dashed var(--smd-border) !important;
+  font-size: 13.5px;
+  text-align: right !important;
+  white-space: normal !important;
+  word-break: break-word;
+}
+.skin-blue .content-wrapper table.smd-kartu--aktif > tbody > tr > td::before {
+  content: attr(data-label);
+  flex: 0 0 auto;
+  max-width: 48%;
+  color: var(--smd-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  text-align: left;
+}
+/* Judul kartu (mis. Jenis Surat) */
+.skin-blue .content-wrapper table.smd-kartu--aktif > tbody > tr > td.smd-kartu__judul {
+  order: -2;
+  display: block;
+  padding: 0 64px 10px 0 !important;
+  border-top: 0 !important;
+  color: var(--smd-900);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.35;
+  text-align: left !important;
+}
+.skin-blue .content-wrapper table.smd-kartu--aktif > tbody > tr > td.smd-kartu__judul::before { content: none; }
+/* Nomor urut jadi lencana kecil di pojok kanan atas */
+.skin-blue .content-wrapper table.smd-kartu--aktif > tbody > tr > td.smd-kartu__no {
+  position: absolute;
+  top: 13px;
+  right: 14px;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px !important;
+  border: 0 !important;
+  border-radius: 999px;
+  gap: 3px;
+  background: var(--smd-50);
+  color: var(--smd-700);
+  font-size: 11px;
+  font-weight: 800;
+}
+.skin-blue .content-wrapper table.smd-kartu--aktif > tbody > tr > td.smd-kartu__no::before { content: 'No.'; max-width: none; color: inherit; font-size: inherit; letter-spacing: 0; text-transform: none; }
+/* Isi kosong ditandai strip */
+.skin-blue .content-wrapper table.smd-kartu--aktif > tbody > tr > td.smd-kartu__kosong::after { content: '\2013'; color: var(--smd-muted); }
+/* Tombol aksi di bawah, memenuhi lebar kartu */
+.skin-blue .content-wrapper table.smd-kartu--aktif > tbody > tr > td.smd-kartu__aksi {
+  order: 9;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 8px;
+  margin-top: auto;
+  padding: 14px 0 0 !important;
+  border-top: 1px solid var(--smd-line) !important;
+  text-align: left !important;
+}
+.skin-blue .content-wrapper table.smd-kartu--aktif > tbody > tr > td.smd-kartu__aksi::before { content: none; }
+.skin-blue .content-wrapper table.smd-kartu--aktif > tbody > tr > td.smd-kartu__aksi.smd-kartu__kosong { display: none; }
+.skin-blue .content-wrapper table.smd-kartu--aktif > tbody > tr > td.smd-kartu__aksi > .btn {
+  flex: 1 1 auto;
+  width: auto !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+.skin-blue .content-wrapper table.smd-kartu--aktif > tbody > tr > td.smd-kartu__aksi > .btn-social { justify-content: flex-start; padding-left: 44px; text-align: left; }
+/* Tombol status permohonan memenuhi satu baris bila masih ada dua tombol lain di belakangnya */
+.skin-blue .content-wrapper table.smd-kartu--aktif > tbody > tr > td.smd-kartu__aksi > .btn-proses:nth-last-child(n+3) { flex-basis: 100%; }
+.skin-blue .content-wrapper table.smd-kartu--aktif > tbody > tr > td.smd-kartu__aksi > .btn-social > :first-child {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  line-height: 1;
+}
+.skin-blue .content-wrapper table.smd-kartu--aktif > tbody > tr > td.smd-kartu__aksi > .btn:not(.btn-social) { flex: 0 0 42px; padding-left: 0; padding-right: 0; }
+/* Baris "Tidak ada data" */
+.skin-blue .content-wrapper table.smd-kartu--aktif > tbody > tr > td.dataTables_empty {
+  display: block;
+  padding: 18px 8px !important;
+  border: 0 !important;
+  color: var(--smd-muted);
+  text-align: center !important;
+}
+.skin-blue .content-wrapper table.smd-kartu--aktif > tbody > tr > td.dataTables_empty::before { content: none; }
+.skin-blue .content-wrapper table.smd-kartu--aktif > tbody > tr:has(> td.dataTables_empty) { grid-column: 1 / -1; border-style: dashed; box-shadow: none; background: var(--smd-bg) !important; }
+
 /* Kontrol DataTables */
 .skin-blue .dataTables_wrapper .dataTables_length,
 .skin-blue .dataTables_wrapper .dataTables_filter,
@@ -631,3 +780,15 @@ table.dataTable thead .sorting_desc::after { opacity: .45; color: var(--smd-prim
   from { opacity: 0; transform: translateY(14px); }
   to { opacity: 1; transform: none; }
 }
+
+/* Pindah halaman di dalam Layanan Mandiri (kelas dipasang skrip di partials/layanan_mandiri.blade.php):
+   animasi masuk hanya diputar saat pertama masuk, tidak setiap pindah menu. */
+html.smd-pindah .skin-blue .content-header .info-box,
+html.smd-pindah .skin-blue .content .box { animation: none !important; }
+/* Di layar kecil isi selalu cukup tinggi sehingga bisa langsung digulir ke atas layar, meski data
+   tabel belum datang. Halaman disembunyikan sebentar sampai posisinya pas (paling lama 1,5 detik). */
+@media (max-width: 991px) {
+  html.smd-pindah .skin-blue .content .col-md-9 { min-height: calc(100vh - 70px); }
+}
+html.smd-sembunyi body { visibility: hidden; animation: smd-tampil 0s linear 1.5s forwards; }
+@keyframes smd-tampil { to { visibility: visible; } }

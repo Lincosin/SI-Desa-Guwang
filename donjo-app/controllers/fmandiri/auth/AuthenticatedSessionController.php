@@ -129,6 +129,20 @@ class AuthenticatedSessionController extends Web_Controller
                 $this->session->set_userdata('anjungan_uuid', $request->anjungan_uuid);
             }
 
+            // KUSTOM pendaftaran-mandiri: akun hasil pendaftaran yang belum diverifikasi admin
+            // tidak bisa masuk; beri tahu warga bila password-nya benar.
+            if ($request->filled('nik') && $request->filled('password')) {
+                $menunggu = PendudukMandiri::query()
+                    ->whereRelation('penduduk', 'nik', $request->nik)
+                    ->status(0)
+                    ->whereNotNull('scan_ktp')
+                    ->first();
+
+                if ($menunggu && Hash::check($request->password, $menunggu->pin)) {
+                    redirect_with('information', 'Akun Anda masih diperiksa oleh operator desa. Silakan coba masuk lagi setelah akun diaktifkan.', ci_route('layanan-mandiri/masuk'));
+                }
+            }
+
             // Login menggunakan NIK atau E-KTP dan password
             $this->authenticate([
                 'query' => fn ($q) => $q->when(
@@ -256,6 +270,10 @@ class AuthenticatedSessionController extends Web_Controller
      */
     protected function caseQueryExist(Request $request): bool
     {
+        // KUSTOM pendaftaran-mandiri: tidak ada lagi verifikasi email/Telegram oleh pendaftar,
+        // jadi akun nonaktif tidak boleh masuk. Kode bawaan dibiarkan di bawah sebagai rujukan.
+        return false;
+
         return PendudukMandiri::query()
             ->when(
                 $request->nik,

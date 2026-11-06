@@ -39,11 +39,13 @@ defined('BASEPATH') || exit('No direct script access allowed');
 
 use App\Events\Surat\PermohonanSuratSubmitted;
 use App\Libraries\TinyMCE;
+use App\Models\Dokumen as DokumenModel;
 use App\Models\DokumenHidup;
 use App\Models\FormatSurat;
 use App\Models\LogSurat;
 use App\Models\Penduduk;
 use App\Models\PermohonanSurat;
+use App\Models\PesanMandiri;
 use App\Models\SyaratSurat;
 use App\Services\LayananSuratCetakService;
 use Mike42\Escpos\PrintConnectors\NetworkPrintConnector;
@@ -51,6 +53,9 @@ use Mike42\Escpos\Printer;
 
 class Surat extends Mandiri_Controller
 {
+    // KUSTOM permohonan dibatalkan: lama (hari) permohonan dibatalkan tetap tampil di daftar utama
+    public const HARI_TAMPIL_DIBATALKAN = 7;
+
     protected TinyMCE $tinymce;
 
     private LayananSuratCetakService $layananSuratCetak;
@@ -68,13 +73,22 @@ class Surat extends Mandiri_Controller
         if ($this->input->is_ajax_request()) {
             $printer = $this->print_connector();
 
+            // KUSTOM permohonan dibatalkan: daftar utama menyembunyikan permohonan yang dibatalkan
+            // lebih dari HARI_TAMPIL_DIBATALKAN hari; semuanya tetap ada di filter Dibatalkan.
+            $tampil = $this->input->get('tampil') === 'dibatalkan' ? 'dibatalkan' : 'aktif';
+
             $query = PermohonanSurat::with([
                 'logSurat:id,tte',
                 'surat:id,nama',
             ])
                 ->without(['penduduk'])
                 ->belumDiambil()
-                ->whereIdPemohon($this->is_login->id_pend);
+                ->whereIdPemohon($this->is_login->id_pend)
+                ->when($tampil === 'dibatalkan', static fn ($q) => $q->where('status', PermohonanSurat::DIBATALKAN))
+                ->when($tampil === 'aktif', static fn ($q) => $q->where(static function ($q): void {
+                    $q->where('status', '!=', PermohonanSurat::DIBATALKAN)
+                        ->orWhere('updated_at', '>=', date('Y-m-d H:i:s', strtotime('-' . self::HARI_TAMPIL_DIBATALKAN . ' days')));
+                }));
 
             return datatables($query)
                 ->addIndexColumn()
@@ -95,10 +109,17 @@ class Surat extends Mandiri_Controller
                     } elseif ($item->status == 4) {
                         $aksi .= "<a class='btn btn-social btn-success btn-sm btn-proses' title='Surat {$item->statusPermohonan}' style='width: 170px'><i class='fa fa-check'></i>{$item->statusPermohonan}</a> ";
                     } else {
-                        $aksi .= "
-                            <a class='btn btn-social btn-danger btn-sm btn-proses' title='Surat {$item->statusPermohonan}' style='width: 170px'><i class='fa fa-times'></i>{$item->statusPermohonan}</a>
-                            <button title='Keterangan' class='btn bg-orange btn-sm keterangan' data-toggle='popover' data-trigger='focus' data-content='{$item->alasan}'><i class='fa fa-info-circle'></i></button>
-                        ";
+                        // KUSTOM permohonan dibatalkan: ganti label merah dengan tombol Ajukan Ulang (form terisi data lama)
+                        if (self::sudahDiajukanUlang($item)) {
+                            $aksi .= "<a class='btn btn-social btn-default btn-sm disabled' title='Permohonan ini sudah diajukan ulang' style='width: 170px'><i class='fa fa-check'></i>Sudah Diajukan Ulang</a> ";
+                        } else {
+                            $url = ci_route('layanan-mandiri.surat.buat') . '?ulang=' . $item->id;
+                            $aksi .= "<a href='{$url}' class='btn btn-social btn-warning btn-sm' title='Ajukan lagi surat ini dengan data yang sudah diisi sebelumnya' style='width: 170px'><i class='fa fa-refresh'></i>Ajukan Ulang</a> ";
+                        }
+                        // KUSTOM hapus riwayat: warga menghapus permohonan yang dibatalkan
+                        $url   = ci_route('layanan-mandiri.surat.hapus-dibatalkan', $item->id);
+                        $judul = e($item->surat->nama ?? 'Surat');
+                        $aksi .= "<button type='button' class='btn btn-social btn-danger btn-sm hapus-dibatalkan' data-url='{$url}' data-judul='{$judul}' title='Hapus riwayat permohonan ini' style='width: 170px'><i class='fa fa-trash-o'></i>Hapus</button> ";
                     }
 
                     if (in_array($item->status, ['0', '1'])) {
@@ -116,15 +137,193 @@ class Surat extends Mandiri_Controller
                         $aksi .= self::tombolSuratJadi($logSurat, $item->surat->nama ?? null);
                     }
 
+                    // KUSTOM: warga menandai surat yang sudah diterima sebagai selesai
+                    if ($item->status == PermohonanSurat::SIAP_DIAMBIL) {
+                        $url   = ci_route('layanan-mandiri.surat.selesai', $item->id);
+                        $judul = e($item->surat->nama ?? 'Surat');
+                        $aksi .= " <button type='button' class='btn btn-social btn-success btn-sm selesai-surat' data-url='{$url}' data-judul='{$judul}' title='Tandai surat sudah Anda terima'><i class='fa fa-check-circle'></i>Selesai</button> ";
+                    }
+
                     return $aksi;
+                })
+                // KUSTOM: tahapan surat untuk warga
+                ->addColumn('tahapan', static function ($item): string {
+                    $logSurat = in_array($item->status, [PermohonanSurat::MENUNGGU_TANDA_TANGAN, PermohonanSurat::SIAP_DIAMBIL]) ? $item->logSuratTerkait() : null;
+
+                    return self::tahapanSurat($item, $logSurat);
                 })
                 ->editColumn('no_antrian', static fn ($item) => get_antrian($item->no_antrian))
                 ->editColumn('created_at', static fn ($item) => tgl_indo2($item->created_at))
-                ->rawColumns(['aksi'])
+                ->rawColumns(['aksi', 'tahapan'])
                 ->make();
         }
 
-        return view('layanan_mandiri.surat.permohonan');
+        // KUSTOM: ringkasan permohonan surat warga
+        $jumlah = PermohonanSurat::withOnly([])
+            ->where('id_pemohon', $this->is_login->id_pend)
+            ->selectRaw('status, COUNT(*) AS jumlah')
+            ->groupBy('status')
+            ->pluck('jumlah', 'status');
+
+        return view('layanan_mandiri.surat.permohonan', [
+            'ringkasan' => [
+                'dilengkapi' => (int) ($jumlah[PermohonanSurat::BELUM_LENGKAP] ?? 0),
+                // Surat yang sudah disetujui tetap dihitung diproses sampai warga menekan Selesai
+                'diproses' => (int) ($jumlah[PermohonanSurat::SEDANG_DIPERIKSA] ?? 0) + (int) ($jumlah[PermohonanSurat::MENUNGGU_TANDA_TANGAN] ?? 0)
+                    + (int) ($jumlah[PermohonanSurat::SIAP_DIAMBIL] ?? 0),
+                'siap'       => (int) ($jumlah[PermohonanSurat::SIAP_DIAMBIL] ?? 0),
+                'selesai'    => (int) ($jumlah[PermohonanSurat::SUDAH_DIAMBIL] ?? 0),
+                'dibatalkan' => (int) ($jumlah[PermohonanSurat::DIBATALKAN] ?? 0), // KUSTOM permohonan dibatalkan
+            ],
+            'hari_tampil_dibatalkan' => self::HARI_TAMPIL_DIBATALKAN, // KUSTOM permohonan dibatalkan
+            'sebutan_kades' => ucwords(setting('sebutan_kepala_desa') ?: 'Kepala Desa'),
+        ]);
+    }
+
+    /**
+     * KUSTOM: tahapan surat untuk warga: Diajukan -> Kepala Dusun -> Kepala Desa/Perbekel -> Selesai.
+     */
+    private static function tahapanSurat(PermohonanSurat $item, ?LogSurat $logSurat): string
+    {
+        $status     = (int) $item->status;
+        $catatan    = $item->tahapPersetujuan($logSurat);
+        $peringatan = false;
+
+        switch ($status) {
+            case PermohonanSurat::BELUM_LENGKAP:
+                $aktif      = 0;
+                $peringatan = true;
+                $catatan    = 'Perlu dilengkapi' . ($item->alasan ? ': ' . $item->alasan : '');
+                break;
+
+            case PermohonanSurat::SEDANG_DIPERIKSA:
+                $aktif = 1;
+                break;
+
+            case PermohonanSurat::MENUNGGU_TANDA_TANGAN:
+                $ditolak    = $logSurat && (int) $logSurat->verifikasi_operator === LogSurat::TOLAK;
+                $diKadus    = ! $logSurat || $ditolak || $logSurat->verifikasi_operator != LogSurat::TERIMA
+                    || ($logSurat->verifikasi_kadus !== null && (int) $logSurat->verifikasi_kadus === 0);
+                $aktif      = $diKadus ? 1 : 2;
+                $peringatan = $ditolak;
+                break;
+
+            case PermohonanSurat::SIAP_DIAMBIL:
+                $aktif   = 3;
+                $catatan = 'Surat sudah disetujui. Lihat atau unduh suratnya, lalu tekan Selesai.';
+                break;
+
+            case PermohonanSurat::SUDAH_DIAMBIL:
+                $aktif = 4;
+                break;
+
+            default:
+                // KUSTOM permohonan dibatalkan: alasan pembatalan langsung terlihat di daftar
+                $alasan = self::alasanPembatalan($item);
+
+                return "<div class='tahapan-surat'><div class='alasan-batal'>"
+                    . "<b class='text-red'><i class='fa fa-times-circle'></i> Dibatalkan</b>"
+                    . ($item->updated_at ? " <span class='text-muted'>pada " . e(tgl_indo2($item->updated_at)) . '</span>' : '')
+                    . "<div class='alasan-batal-isi'><b>Alasan:</b> " . ($alasan !== '' ? nl2br(e($alasan)) : "<i class='text-muted'>tidak dicantumkan</i>") . '</div>'
+                    . '</div></div>';
+        }
+
+        $langkah = [
+            'Diajukan',
+            'Kepala ' . ucwords(setting('sebutan_dusun') ?: 'Dusun'),
+            ucwords(setting('sebutan_kepala_desa') ?: 'Kepala Desa'),
+            'Selesai',
+        ];
+
+        $html = "<div class='tahapan-surat'><ol>";
+
+        foreach ($langkah as $i => $label) {
+            if ($i < $aktif) {
+                $kelas = 'selesai';
+                $titik = "<i class='fa fa-check'></i>";
+            } elseif ($i === $aktif) {
+                $kelas = $peringatan ? 'perhatian' : 'aktif';
+                $titik = $peringatan ? "<i class='fa fa-exclamation'></i>" : $i + 1;
+            } else {
+                $kelas = '';
+                $titik = $i + 1;
+            }
+            $html .= "<li class='{$kelas}'><span class='titik'>{$titik}</span><span class='label-tahap'>" . e($label) . '</span></li>';
+        }
+
+        return $html . "</ol><div class='tahapan-catatan'>" . e($catatan) . '</div></div>';
+    }
+
+    /**
+     * KUSTOM permohonan dibatalkan: alasan pembatalan. Diambil dari kolom alasan; untuk permohonan lama
+     * yang dibatalkan petugas sebelum kolom itu diisi, diambil dari pesan pembatalan yang dikirim ke warga.
+     */
+    private static function alasanPembatalan(PermohonanSurat $item): string
+    {
+        $alasan = trim((string) $item->alasan);
+
+        if ($alasan === '' && $item->surat) {
+            $pesan = PesanMandiri::where('penduduk_id', $item->id_pemohon)
+                ->where('subjek', 'Permohonan Surat ' . $item->surat->nama . ' Dibatalkan')
+                ->orderByDesc('tgl_upload')
+                ->value('komentar');
+            $alasan = trim(html_entity_decode(strip_tags((string) $pesan)));
+        }
+
+        return $alasan;
+    }
+
+    /**
+     * KUSTOM permohonan dibatalkan: sudah ada permohonan surat sejenis yang dibuat setelah pembatalan ini.
+     */
+    private static function sudahDiajukanUlang(PermohonanSurat $item): bool
+    {
+        return PermohonanSurat::withOnly([])
+            ->where('id_pemohon', $item->id_pemohon)
+            ->where('id_surat', $item->id_surat)
+            ->where('status', '!=', PermohonanSurat::DIBATALKAN)
+            ->where('created_at', '>=', $item->updated_at)
+            ->exists();
+    }
+
+    /**
+     * KUSTOM: warga menandai surat yang sudah disetujui dan diterima sebagai selesai (status Sudah Diambil).
+     * Surat tetap bisa dilihat dan diunduh lagi di menu Arsip Surat.
+     */
+    public function selesai($id = ''): void
+    {
+        $permohonan = PermohonanSurat::with(['surat'])
+            ->where('id', $id)
+            ->milikPenduduk($this->is_login->id_pend)
+            ->where('status', PermohonanSurat::SIAP_DIAMBIL)
+            ->first();
+
+        if (! $permohonan) {
+            redirect_with('error', 'Surat tidak ditemukan atau belum disetujui.', 'layanan-mandiri/permohonan-surat');
+        }
+
+        $permohonan->update(['status' => PermohonanSurat::SUDAH_DIAMBIL]);
+
+        redirect_with('success', 'Surat ' . ($permohonan->surat->nama ?? '') . ' ditandai selesai. Surat tetap bisa dilihat dan diunduh lagi di menu Arsip Surat.', 'layanan-mandiri/permohonan-surat');
+    }
+
+    /**
+     * KUSTOM hapus riwayat: warga menghapus permohonan miliknya yang berstatus Dibatalkan.
+     * Tanpa id: hapus semua permohonan dibatalkan milik warga. Dokumen syarat di menu Dokumen tidak ikut terhapus.
+     */
+    public function hapus_dibatalkan($id = ''): void
+    {
+        $jumlah = PermohonanSurat::withOnly([])
+            ->milikPenduduk($this->is_login->id_pend)
+            ->where('status', PermohonanSurat::DIBATALKAN)
+            ->when($id !== '' && $id !== null, static fn ($q) => $q->where('id', (int) $id))
+            ->delete();
+
+        if (! $jumlah) {
+            redirect_with('error', 'Tidak ada permohonan dibatalkan yang dihapus.', 'layanan-mandiri/permohonan-surat');
+        }
+
+        redirect_with('success', $jumlah . ' riwayat permohonan yang dibatalkan berhasil dihapus.', 'layanan-mandiri/permohonan-surat');
     }
 
     public function arsip()
@@ -169,8 +368,22 @@ class Surat extends Mandiri_Controller
     {
         $id_pend    = $this->is_login->id_pend;
         $permohonan = [];
+        // KUSTOM permohonan dibatalkan: tanda Ajukan Ulang hanya berlaku untuk satu kali pengisian form
+        $this->session->unset_userdata('ajukan_ulang');
+        $ajukan_ulang = null;
         // Cek hanya status = 0 (belum lengkap) yg boleh di ubah
-        if ($id) {
+        if (! $id && ($idUlang = (int) $this->input->get('ulang'))) {
+            // KUSTOM permohonan dibatalkan: form baru terisi data permohonan yang dibatalkan
+            $obj = PermohonanSurat::where(['id' => $idUlang, 'id_pemohon' => $id_pend, 'status' => PermohonanSurat::DIBATALKAN])->first();
+
+            if (! $obj) {
+                redirect('layanan-mandiri/surat/buat');
+            }
+            $permohonan   = $obj->toArray();
+            $ajukan_ulang = $permohonan;
+            $this->session->set_userdata('ajukan_ulang', $obj->id);
+            $form_action = ci_route('layanan-mandiri/surat/form');
+        } elseif ($id) {
             $obj = PermohonanSurat::where(['id' => $id, 'id_pemohon' => $id_pend, 'status' => 0])->first();
 
             if (! $obj) {
@@ -187,6 +400,7 @@ class Surat extends Mandiri_Controller
             'menu_dokumen_mandiri' => SyaratSurat::get()->toArray(),
             'permohonan'           => $permohonan,
             'form_action'          => $form_action,
+            'ajukan_ulang'         => $ajukan_ulang, // KUSTOM permohonan dibatalkan
         ];
 
         return view('layanan_mandiri.surat.buat', $data);
@@ -217,6 +431,8 @@ class Surat extends Mandiri_Controller
                             : (json_decode($syaratPermohonan, true) ?? []),
                         'syarat_id'    => $item->ref_syarat_id,
                         'cek_anjungan' => $this->cek_anjungan,
+                        // KUSTOM unggah syarat: file yang sudah diunggah tapi permohonannya belum dikirim
+                        'unggah_tertunda' => $this->session->data_permohonan['syarat_unggah'] ?? [],
                     ],
                     returnView: true
                 ))
@@ -232,7 +448,9 @@ class Surat extends Mandiri_Controller
     public function form($id = '')
     {
         $id_pend                        = $this->is_login->id_pend;
-        $post                           = $this->input->post() ?: $this->session->data_permohonan;
+        $post                           = $this->input->post();
+        // KUSTOM unggah syarat: simpan sementara file syarat yang diunggah warga
+        $post                           = $post ? $this->unggahSyaratPermohonan($post, $id) : $this->session->data_permohonan;
         $this->session->data_permohonan = $post;
 
         if ($id) {
@@ -251,7 +469,7 @@ class Surat extends Mandiri_Controller
             }
             $data = [
                 'permohonan' => null,
-                'isian_form' => null,
+                'isian_form' => $this->isianAjukanUlang($post['id_surat']), // KUSTOM permohonan dibatalkan
                 'id_surat'   => $post['id_surat'],
             ];
         }
@@ -278,6 +496,36 @@ class Surat extends Mandiri_Controller
         return view('layanan_mandiri.surat.form', $data);
     }
 
+    /**
+     * KUSTOM permohonan dibatalkan: isian form permohonan yang dibatalkan, untuk mengisi form Ajukan Ulang.
+     * Nomor surat, token keamanan dan data teknis form tidak ikut agar diisi baru.
+     */
+    private function isianAjukanUlang($idSurat): ?string
+    {
+        $idUlang = (int) $this->session->ajukan_ulang;
+
+        if (! $idUlang) {
+            return null;
+        }
+
+        $lama = PermohonanSurat::withOnly([])
+            ->where(['id' => $idUlang, 'id_pemohon' => $this->is_login->id_pend, 'status' => PermohonanSurat::DIBATALKAN])
+            ->first();
+
+        // Jenis surat diganti warga: form dikosongkan
+        if (! $lama || (int) $lama->id_surat !== (int) $idSurat || ! is_array($lama->isian_form)) {
+            return null;
+        }
+
+        $isian = $lama->isian_form;
+
+        foreach (['nomor', 'url_surat', 'url_remote', 'submit_cetak', 'nik', $this->security->get_csrf_token_name()] as $kunci) {
+            unset($isian[$kunci]);
+        }
+
+        return $isian ? json_encode($isian) : null;
+    }
+
     public function kirim($id = ''): void
     {
         $data_permohonan = $this->session->data_permohonan;
@@ -291,12 +539,15 @@ class Surat extends Mandiri_Controller
             'status'      => 1, // Selalu 1 bagi penggun layanan mandiri
             'keterangan'  => $this->security->xss_clean($data_permohonan['keterangan']),
             'no_hp_aktif' => bilangan($data_permohonan['no_hp_aktif'] ?? $post['no_hp_aktif']),
-            'syarat'      => $data_permohonan['syarat'],
+            'syarat'      => $this->simpanDokumenSyarat($data_permohonan), // KUSTOM unggah syarat
             'updated_at'  => date('Y-m-d H:i:s'),
         ];
 
         if ($id) {
             PermohonanSurat::whereId($id)->update($data);
+
+            // KUSTOM notifikasi WhatsApp: permohonan dilengkapi warga -> WA ke Kepala Dusun pemohon
+            LogSurat::waPermohonanBaru($data['id_pemohon'], FormatSurat::find($data['id_surat'])->nama ?? null);
         } else {
             $data['created_at'] = $data['updated_at'];
 
@@ -314,11 +565,101 @@ class Surat extends Mandiri_Controller
             } catch (Throwable $e) {
                 log_message('error', 'Notifikasi permohonan surat gagal: ' . $e->getMessage());
             }
+
+            // KUSTOM notifikasi WhatsApp: permohonan baru -> WA ke Kepala Dusun pemohon
+            LogSurat::waPermohonanBaru($permohonan->id_pemohon, $surat->nama ?? null);
         }
 
         $this->session->unset_userdata('data_permohonan');
+        $this->session->unset_userdata('ajukan_ulang'); // KUSTOM permohonan dibatalkan
 
         redirect('layanan-mandiri/permohonan-surat');
+    }
+
+    /**
+     * KUSTOM unggah syarat: warga bisa langsung mengunggah file untuk tiap syarat surat.
+     * File disimpan sementara di folder dokumen dan dicatat di sesi; baru masuk ke menu Dokumen
+     * warga saat permohonan dikirim (lihat simpanDokumenSyarat).
+     */
+    private function unggahSyaratPermohonan(array $post, $id = ''): array
+    {
+        $lama    = $this->session->data_permohonan['syarat_unggah'] ?? [];
+        $syarat  = (array) ($post['syarat'] ?? []);
+        $unggah  = [];
+        $baru    = [];
+        $files   = $_FILES['syarat_file']['name'] ?? [];
+
+        $this->load->library('upload');
+
+        foreach ($files as $idSyarat => $namaAsli) {
+            if ($namaAsli === '' || ($_FILES['syarat_file']['error'][$idSyarat] ?? UPLOAD_ERR_NO_FILE) == UPLOAD_ERR_NO_FILE) {
+                continue;
+            }
+
+            $namaSyarat = SyaratSurat::where('ref_syarat_id', $idSyarat)->value('ref_syarat_nama') ?: 'Dokumen Syarat';
+            $this->upload->initialize([
+                'upload_path'   => LOKASI_DOKUMEN,
+                'allowed_types' => 'jpg|jpeg|png|pdf',
+                'file_name'     => namafile($namaSyarat),
+            ]);
+
+            if (! $this->upload->do_upload("syarat_file[{$idSyarat}]")) {
+                foreach ($baru as $berkas) {
+                    @unlink(LOKASI_DOKUMEN . $berkas);
+                }
+                redirect_with('error', 'Gagal mengunggah ' . $namaSyarat . ': ' . strip_tags($this->upload->display_errors(null, null)), 'layanan-mandiri/surat/buat' . ($id ? "/{$id}" : ''));
+            }
+
+            $unggah[$idSyarat] = $baru[] = $this->upload->data()['file_name'];
+        }
+
+        // File lama tetap dipakai bila syarat itu masih ada di form dan tidak diganti dengan dokumen yang sudah ada
+        foreach ($lama as $idSyarat => $berkas) {
+            if (! isset($unggah[$idSyarat]) && array_key_exists($idSyarat, $syarat) && $syarat[$idSyarat] === '' && is_file(LOKASI_DOKUMEN . $berkas)) {
+                $unggah[$idSyarat] = $berkas;
+            } elseif (($unggah[$idSyarat] ?? null) !== $berkas) {
+                @unlink(LOKASI_DOKUMEN . $berkas);
+            }
+        }
+
+        $post['syarat_unggah'] = $unggah;
+
+        return $post;
+    }
+
+    /**
+     * KUSTOM unggah syarat: file syarat yang diunggah saat membuat surat otomatis masuk ke menu Dokumen
+     * warga (jenis dokumen sesuai syaratnya) dan dipakai sebagai dokumen syarat permohonan.
+     */
+    private function simpanDokumenSyarat(?array $data_permohonan): array
+    {
+        $syarat = (array) ($data_permohonan['syarat'] ?? []);
+
+        foreach ($data_permohonan['syarat_unggah'] ?? [] as $idSyarat => $berkas) {
+            if (! is_file(LOKASI_DOKUMEN . $berkas)) {
+                continue;
+            }
+
+            $dokumen = DokumenModel::create([
+                'nama'       => SyaratSurat::where('ref_syarat_id', $idSyarat)->value('ref_syarat_nama') ?: 'Dokumen Syarat',
+                'satuan'     => $berkas,
+                'id_pend'    => $this->is_login->id_pend,
+                'id_syarat'  => (int) $idSyarat,
+                'kategori'   => 1,
+                'tipe'       => 1,
+                'dok_warga'  => DokumenModel::DOKUMEN_WARGA,
+                'enabled'    => DokumenModel::ENABLE,
+                'status'     => 1,
+                'tahun'      => date('Y'),
+                'tgl_upload' => date('Y-m-d H:i:s'),
+                'created_by' => $this->is_login->id_pend,
+                'updated_by' => $this->is_login->id_pend,
+            ]);
+
+            $syarat[$idSyarat] = (string) $dokumen->id;
+        }
+
+        return $syarat;
     }
 
     public function proses($id = ''): void
@@ -327,7 +668,12 @@ class Surat extends Mandiri_Controller
             ->where('id', $id)
             ->milikPenduduk($this->is_login->id_pend)
             ->firstOrFail();
+        // KUSTOM permohonan dibatalkan: hanya permohonan Belum Lengkap / Sedang Diperiksa yang bisa dibatalkan warga
+        if (! in_array((int) $permohanan->status, [PermohonanSurat::BELUM_LENGKAP, PermohonanSurat::SEDANG_DIPERIKSA], true)) {
+            redirect_with('error', 'Permohonan ini sudah diproses dan tidak bisa dibatalkan.', 'layanan-mandiri/permohonan-surat');
+        }
         $permohanan->status = PermohonanSurat::DIBATALKAN;
+        $permohanan->alasan = 'Dibatalkan sendiri oleh pemohon'; // KUSTOM permohonan dibatalkan
         $permohanan->save();
 
         $isi = 'Penduduk atas nama : ' . $this->is_login->nama . ' - Telah membatalkan permohonan surat ' . $permohanan->surat->nama;

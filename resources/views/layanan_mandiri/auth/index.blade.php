@@ -60,7 +60,8 @@
                                     <br />{{ ucwords(setting('sebutan_kabupaten')) }} {{ $desa['nama_kabupaten'] }}
                                     <br />{{ $desa['alamat_kantor'] }}
                                     <br />Kodepos {{ $desa['kode_pos'] }}
-                                    <br /><br />Silakan hubungi operator desa untuk mendapatkan kode PIN anda.
+                                    {{-- KUSTOM pendaftaran-mandiri --}}
+                                    <br /><br />{{ setting('tampilkan_pendaftaran') ? 'Belum punya akun? Daftar sendiri dengan NIK dan Nomor KK, atau hubungi operator desa.' : 'Silakan hubungi operator desa untuk mendapatkan akun Layanan Mandiri.' }}
                                     <br /><br /><br />IP Address: {{ request()->ip() }}
                                     @if ($cek_anjungan)
                                         @if ($cek_anjungan['mac_address'])
@@ -81,7 +82,10 @@
                             @endphp
 
                             @if ($errors->any())
-                                <div @if (!str_contains($errors->first('email'), 'Terlalu banyak upaya masuk.')) id="notif" @endif class="alert alert-danger">
+                                {{-- KUSTOM pendaftaran-mandiri: satu kotak galat bergaya "Gagal" (login tidak lagi menampilkan galat dua kali) --}}
+                                <div @if (!str_contains($errors->first('email'), 'Terlalu banyak upaya masuk.')) id="notif" @endif class="alert alert-danger alert-dismissible">
+                                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+                                    <h4><i class="icon fa fa-ban"></i> Gagal</h4>
                                     @foreach ($errors->all() as $item)
                                         @if (str_contains($item, 'Terlalu banyak upaya masuk.'))
                                             <p id="countdown">{{ $item }}</p>

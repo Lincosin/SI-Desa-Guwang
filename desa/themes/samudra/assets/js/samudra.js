@@ -381,19 +381,220 @@
   }
 
   // ------------------------------------------------------------------
+  // Kaca buram tanpa backdrop-filter.
+  // backdrop-filter memunculkan garis tegak/hitam di Chrome Windows dengan zoom
+  // browser bukan 100%. Sebagai gantinya, di balik setiap kaca dipasang salinan
+  // foto di belakangnya yang diburamkan dengan filter biasa, lalu digeser agar
+  // segaris dengan foto aslinya. Tanpa JavaScript, kaca tetap berwarna biasa.
+  // ------------------------------------------------------------------
+  (function kacaBuram() {
+    var TEPI = 48; // sama dengan ruang tepi di samudra.css (.smd-kaca__lapis)
+    var daftar = [];
+    var hero = document.querySelector('.smd-hero');
+    var heroMedia = hero && hero.querySelector('.smd-hero__media');
+
+    // Posisi el di halaman tanpa ikut transform (animasi masuk, hover)
+    function posisiHalaman(el) {
+      var x = 0, y = 0;
+      while (el) {
+        x += el.offsetLeft; y += el.offsetTop; el = el.offsetParent;
+        if (el) { x += el.clientLeft; y += el.clientTop; }
+      }
+      return { x: x, y: y };
+    }
+
+    // Opsi: lepas = kaca menempel di layar (navbar); belakang = elemen tempat bingkai
+    // disisipkan di dalam akar, untuk kaca yang tidak boleh menutupi lapisan di atas foto
+    function pasang(el, akar, salin, opsi) {
+      if (!el || !akar) return;
+      opsi = opsi || {};
+      var bingkai = document.createElement('div');
+      var lapis = document.createElement('div');
+      var pinggir = opsi.belakang ? null : salin();
+      var isi = salin();
+      bingkai.className = 'smd-kaca__bingkai' + (opsi.belakang ? ' smd-kaca__bingkai--belakang' : '');
+      bingkai.setAttribute('aria-hidden', 'true');
+      lapis.className = 'smd-kaca__lapis';
+      if (pinggir) {
+        pinggir.classList.add('smd-kaca__pinggir');
+        lapis.appendChild(pinggir);
+      }
+      isi.classList.add('smd-kaca__salinan');
+      lapis.appendChild(isi);
+      bingkai.appendChild(lapis);
+      if (opsi.belakang) {
+        opsi.belakang.parentNode.insertBefore(bingkai, opsi.belakang.nextSibling);
+      } else {
+        el.insertBefore(bingkai, el.firstChild);
+        el.classList.add('smd-kaca');
+      }
+      daftar.push({ el: el, akar: akar, bingkai: bingkai, pinggir: pinggir, lepas: !!opsi.lepas, belakang: !!opsi.belakang });
+    }
+
+    function atur() {
+      daftar.forEach(function (k) {
+        var g = getComputedStyle(k.el);
+        var w = k.akar.clientWidth, h = k.akar.clientHeight;
+        var p;
+        if (k.lepas) {
+          var r1 = k.akar.getBoundingClientRect(), r2 = k.el.getBoundingClientRect();
+          p = { x: r2.left - r1.left - k.akar.clientLeft, y: r2.top - r1.top - k.akar.clientTop };
+        } else {
+          var a = posisiHalaman(k.akar), b = posisiHalaman(k.el);
+          p = { x: b.x - a.x - k.akar.clientLeft, y: b.y - a.y - k.akar.clientTop };
+        }
+        var s = k.bingkai.style;
+        // Di dalam kaca, bingkai menempati area di dalam garis tepi kaca
+        var bl = k.belakang ? 0 : parseFloat(g.borderLeftWidth) || 0;
+        var bt = k.belakang ? 0 : parseFloat(g.borderTopWidth) || 0;
+        if (k.belakang) {
+          s.left = p.x + 'px';
+          s.top = p.y + 'px';
+          s.width = k.el.offsetWidth + 'px';
+          s.height = k.el.offsetHeight + 'px';
+        }
+        s.setProperty('--kx', (p.x + bl) + 'px');
+        s.setProperty('--ky', (p.y + bt) + 'px');
+        s.setProperty('--kw', w + 'px');
+        s.setProperty('--kh', h + 'px');
+        s.borderRadius = Math.max(0, (parseFloat(g.borderTopLeftRadius) || 0) - bt) + 'px';
+        if (k.pinggir) {
+          // Salinan cadangan, diperbesar tepat sejauh TEPI, mengisi ruang di luar foto agar
+          // tepi blur tidak memudar. Hanya perlu bila kaca dekat tepi foto (navbar, layar ponsel).
+          s.setProperty('--ksx', (1 + 2 * TEPI / Math.max(1, w)).toFixed(4));
+          s.setProperty('--ksy', (1 + 2 * TEPI / Math.max(1, h)).toFixed(4));
+          var dekat = p.x < TEPI || p.y < TEPI || p.x + k.el.offsetWidth > w - TEPI || p.y + k.el.offsetHeight > h - TEPI;
+          k.pinggir.style.display = dekat ? '' : 'none';
+        }
+      });
+    }
+
+    // Banner: navbar, kartu Kantor Desa, bilah statistik, label sambutan, tombol kaca
+    if (heroMedia) {
+      var salinHero = function () {
+        var c = heroMedia.cloneNode(true);
+        c.removeAttribute('aria-hidden');
+        return c;
+      };
+      if (navbar && body.classList.contains('smd-has-hero')) pasang(navbar, hero, salinHero, { lepas: true });
+      [hero.querySelector('.smd-hero__card'), hero.querySelector('.smd-statbar'), hero.querySelector('.smd-hero__eyebrow')]
+        .concat($all('.smd-hero__cta .smd-btn--glass', hero))
+        .forEach(function (el) { pasang(el, hero, salinHero); });
+    }
+
+    // Kartu berita bergambar
+    $all('.smd-tile').forEach(function (tile) {
+      var img = tile.querySelector('.smd-tile__img');
+      var gaya = getComputedStyle(tile);
+      var bayang = getComputedStyle(tile, '::after').backgroundImage;
+      pasang(tile.querySelector('.smd-tile__body'), tile, function () {
+        var c = document.createElement('div');
+        c.style.backgroundColor = gaya.backgroundColor;
+        c.style.backgroundImage = gaya.backgroundImage;
+        if (img) {
+          var i = img.cloneNode(false);
+          i.alt = '';
+          c.appendChild(i);
+        }
+        var redup = document.createElement('div');
+        redup.className = 'smd-kaca__redup';
+        redup.style.backgroundImage = bayang;
+        c.appendChild(redup);
+        return c;
+      });
+    });
+
+    // Tombol bulat di pita ajakan (aspirasi)
+    $all('.smd-cta-strip').forEach(function (pita) {
+      var gaya = getComputedStyle(pita);
+      var bayang = getComputedStyle(pita, '::before').backgroundImage;
+      pasang(pita.querySelector('.smd-cta-strip__play'), pita, function () {
+        var c = document.createElement('div');
+        ['backgroundColor', 'backgroundImage', 'backgroundSize', 'backgroundPosition'].forEach(function (k) { c.style[k] = gaya[k]; });
+        var redup = document.createElement('div');
+        redup.className = 'smd-kaca__redup';
+        redup.style.backgroundImage = bayang;
+        c.appendChild(redup);
+        return c;
+      });
+    });
+
+    // Bagian gelap "Layanan": hanya foto samarnya yang diburamkan, tepat di atas foto itu,
+    // sehingga cahaya biru di atasnya dan warna kaca kartu tetap seperti biasa
+    var gelap = document.querySelector('.smd-dark');
+    var gelapImg = gelap && gelap.querySelector('.smd-dark__img');
+    if (gelapImg) {
+      var gelapGaya = getComputedStyle(gelap);
+      var salinGelap = function () {
+        var c = document.createElement('div');
+        c.style.backgroundColor = gelapGaya.backgroundColor;
+        c.style.backgroundImage = gelapGaya.backgroundImage;
+        c.appendChild(gelapImg.cloneNode(false));
+        return c;
+      };
+      // Kartu Layanan dan panel pencarian di dalam bagian ini
+      $all('.smd-glass-dark', gelap).forEach(function (el) { pasang(el, gelap, salinGelap, { belakang: gelapImg }); });
+    }
+
+    if (!daftar.length) return;
+    atur();
+
+    // Animasi pada salinan (Ken Burns, cahaya biru) disamakan waktunya dengan aslinya
+    function samakan(sel, akar) {
+      if (!akar || !akar.getAnimations) return;
+      var asli = $all(sel, akar).filter(function (el) { return !el.closest('.smd-kaca__bingkai'); });
+      $all('.smd-kaca__lapis').forEach(function (lapis) {
+        $all(sel, lapis).forEach(function (el, i) {
+          var a = asli[i % asli.length] ? asli[i % asli.length].getAnimations() : [];
+          el.getAnimations().forEach(function (b, j) {
+            if (a[j] && a[j].currentTime !== null) b.currentTime = a[j].currentTime;
+          });
+        });
+      });
+    }
+    samakan('.smd-hero__slide', heroMedia);
+
+    var antre = false;
+    function jadwal() {
+      if (antre) return;
+      antre = true;
+      requestAnimationFrame(function () { antre = false; atur(); });
+    }
+    window.addEventListener('resize', jadwal, { passive: true });
+    window.addEventListener('load', jadwal);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(jadwal);
+    if (window.ResizeObserver) {
+      var ro = new ResizeObserver(jadwal);
+      daftar.forEach(function (k) { ro.observe(k.el); ro.observe(k.akar); });
+      $all('.smd-hero__text').forEach(function (el) { ro.observe(el); });
+    }
+    // Navbar menempel di atas saat digulir, jadi posisinya terhadap banner berubah
+    if (daftar.some(function (k) { return k.lepas; })) {
+      window.addEventListener('scroll', function () {
+        if ((window.scrollY || window.pageYOffset) < 200) jadwal();
+      }, { passive: true });
+    }
+  })();
+
+  // ------------------------------------------------------------------
   // Banner: latar berganti (gambar latar + slider) dengan efek Ken Burns
   // ------------------------------------------------------------------
   (function heroSlides() {
-    var bg = document.querySelector('.smd-hero__bg');
+    var media = document.querySelector('.smd-hero > .smd-hero__media');
+    var bg = media && media.querySelector('.smd-hero__bg');
     if (!bg) return;
     var slides = $all('.smd-hero__slide', bg);
+    // Salinan foto di balik kaca (lihat kacaBuram) ikut berganti bersama foto asli
+    var bgs = [bg].concat($all('.smd-kaca__lapis .smd-hero__bg'));
+    var sets = bgs.map(function (b) { return $all('.smd-hero__slide', b); });
+    var each = function (i, fn) { sets.forEach(function (s) { if (s[i]) fn(s[i]); }); };
     var urlOf = function (el) {
       var m = (el.style.backgroundImage || '').match(/url\(["']?(.*?)["']?\)/);
       return m ? m[1] : null;
     };
     // Muat semua foto lebih dulu; foto pertama ditampilkan perlahan setelah siap
     var ready = slides.map(function () { return false; });
-    var shown = function () { bg.classList.add('is-loaded'); };
+    var shown = function () { bgs.forEach(function (b) { b.classList.add('is-loaded'); }); };
     slides.forEach(function (el, i) {
       var url = urlOf(el);
       if (!url) {
@@ -416,15 +617,13 @@
     setInterval(function () {
       var next = (cur + 1) % slides.length;
       if (document.hidden || !ready[next]) return; // tunggu foto berikutnya selesai dimuat
-      var prev = slides[cur];
-      var el = slides[next];
+      var prev = cur;
       // Foto lama tetap utuh di bawah, foto baru memudar masuk di atasnya
-      prev.classList.remove('is-active');
-      prev.classList.add('is-prev');
-      el.classList.remove('is-zoom');
-      void el.offsetWidth; // mulai ulang efek zoom
-      el.classList.add('is-zoom', 'is-active');
-      setTimeout(function () { prev.classList.remove('is-prev', 'is-zoom'); }, 2400);
+      each(prev, function (el) { el.classList.remove('is-active'); el.classList.add('is-prev'); });
+      each(next, function (el) { el.classList.remove('is-zoom'); });
+      void bg.offsetWidth; // mulai ulang efek zoom
+      each(next, function (el) { el.classList.add('is-zoom', 'is-active'); });
+      setTimeout(function () { each(prev, function (el) { el.classList.remove('is-prev', 'is-zoom'); }); }, 2400);
       cur = next;
     }, 8000);
   })();

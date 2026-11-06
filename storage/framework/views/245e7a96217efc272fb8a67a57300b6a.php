@@ -62,6 +62,24 @@
     // Widget yang sudah punya bagian sendiri di beranda tidak diulang
     $smd_lewati = array_filter([$smd_komen->isNotEmpty() ? 'komentar' : null, $smd_galeri->isNotEmpty() ? 'galeri' : null]);
     $smd_widget = collect($widgetAktif ?? [])->reject(static fn ($w) => in_array($w['isi'], $smd_lewati))->values();
+    // KUSTOM Potensi Desa: artikel dari kategori potensi (beserta sub-kategorinya)
+    $smd_potensi = collect();
+    $smd_potensi_url = null;
+    if (theme_config('tampilkan_potensi', '1') == '1') {
+        try {
+            $smd_potensi_slug = trim((string) theme_config('kategori_potensi', 'potensi-desa')) ?: 'potensi-desa';
+            $smd_potensi_kat = \App\Models\Kategori::where('slug', $smd_potensi_slug)->where('enabled', 1)->first();
+            if ($smd_potensi_kat) {
+                $smd_potensi_ids = \App\Models\Kategori::where('parrent', $smd_potensi_kat->id)->where('enabled', 1)->pluck('id')->push($smd_potensi_kat->id)->all();
+                $smd_potensi = \App\Models\Artikel::active()->where('tipe', 'dinamis')->whereIn('id_kategori', $smd_potensi_ids)
+                    ->orderBy('tgl_upload', 'desc')->take(8)->get();
+                $smd_potensi_url = site_url("{$smd_alt_slug}/kategori/{$smd_potensi_kat->slug}");
+            }
+        } catch (\Throwable $e) {
+            log_message('error', 'Tema samudra, potensi desa: ' . $e->getMessage());
+            $smd_potensi = collect();
+        }
+    }
 ?>
 
 
@@ -122,7 +140,45 @@
 </section>
 
 
-<?php if(theme_config('tampilkan_pintasan', '1') == '1'): ?>
+<?php if($smd_potensi->isNotEmpty()): ?>
+    <section class="smd-section" id="smd-potensi">
+        <div class="smd-container">
+            <header class="smd-shead smd-shead--center">
+                <span class="smd-shead__eyebrow">Potensi <?php echo e($smd_sebutan); ?></span>
+                <h2 class="smd-shead__title">Kekayaan dan peluang <?php echo e($smd_nama); ?></h2>
+            </header>
+            <div class="smd-offers">
+                <?php $__currentLoopData = $smd_potensi; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $smd_p): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    <?php
+                        $smd_p_url = $smd_p->url_slug;
+                        $smd_p_kat = $smd_p->category && $smd_p->category->parrent ? $smd_p->category->kategori : null;
+                        $smd_p_ringkas = trim(preg_replace('/\s+/', ' ', html_entity_decode(strip_tags((string) $smd_p->isi))));
+                    ?>
+                    <article class="smd-glass smd-offer smd-spotlight">
+                        <a href="<?php echo e($smd_p_url); ?>" class="smd-offer__media" tabindex="-1" aria-hidden="true">
+                            <img src="<?php echo e($smd_p->gambar ? AmbilFotoArtikel($smd_p->gambar, 'sedang') : gambar_desa($desa['logo'])); ?>" alt="" loading="lazy">
+                            <span class="smd-pill smd-pill--solid"><i class="fas fa-seedling" aria-hidden="true"></i> <?php echo e($smd_p_kat ?: 'Potensi'); ?></span>
+                        </a>
+                        <div class="smd-offer__body">
+                            <h3><?php echo e($smd_p->judul); ?></h3>
+                            <p><?php echo e(\Illuminate\Support\Str::limit($smd_p_ringkas, 90)); ?></p>
+                            <a href="<?php echo e($smd_p_url); ?>" class="smd-btn smd-btn--outline smd-btn--block">Selengkapnya</a>
+                        </div>
+                    </article>
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+            </div>
+            <?php if($smd_potensi_url): ?>
+                <div class="smd-shead__foot">
+                    <a href="<?php echo e($smd_potensi_url); ?>" class="smd-btn smd-btn--glass-light">Lihat Semua Potensi <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+                </div>
+            <?php endif; ?>
+        </div>
+    </section>
+<?php endif; ?>
+
+
+<?php $smd_pintasan = theme_config('tampilkan_pintasan', '1') == '1'; ?>
+<?php if($smd_pintasan): ?>
     <section class="smd-section smd-dark" aria-labelledby="smd-layanan-judul">
         <?php if($smd_latar_cta): ?>
             <div class="smd-dark__img" style="background-image: url('<?php echo e($smd_latar_cta); ?>');" aria-hidden="true"></div>
@@ -147,12 +203,12 @@
                 <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
             </div>
         </div>
-    </section>
+        
 <?php endif; ?>
 
 
-<section class="smd-container smd-finder-wrap <?php echo e(theme_config('tampilkan_pintasan', '1') == '1' ? 'smd-finder-wrap--overlap' : ''); ?>">
-    <form action="<?php echo e(site_url('/')); ?>" method="get" role="search" class="smd-glass smd-finder" data-smd-finder data-kategori="<?php echo e(site_url($smd_alt_slug . '/kategori')); ?>">
+<section class="smd-container smd-finder-wrap <?php echo e($smd_pintasan ? 'smd-finder-wrap--gelap' : ''); ?>">
+    <form action="<?php echo e(site_url('/')); ?>" method="get" role="search" class="<?php echo e($smd_pintasan ? 'smd-glass-dark' : 'smd-glass'); ?> smd-finder" data-smd-finder data-kategori="<?php echo e(site_url($smd_alt_slug . '/kategori')); ?>">
         <div class="smd-finder__head">
             <span class="smd-shead__eyebrow">Pencarian cepat</span>
             <h2 class="smd-finder__title">Apa yang ingin Anda ketahui?</h2>
@@ -194,6 +250,10 @@
         <?php endif; ?>
     </form>
 </section>
+
+<?php if($smd_pintasan): ?>
+    </section>
+<?php endif; ?>
 
 
 <?php if($smd_galeri->isNotEmpty()): ?>

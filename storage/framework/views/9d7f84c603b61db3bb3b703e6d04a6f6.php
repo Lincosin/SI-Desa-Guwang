@@ -65,7 +65,9 @@
 
                                     <br />Kodepos <?php echo e($desa['kode_pos']); ?>
 
-                                    <br /><br />Silakan hubungi operator desa untuk mendapatkan kode PIN anda.
+                                    
+                                    <br /><br /><?php echo e(setting('tampilkan_pendaftaran') ? 'Belum punya akun? Daftar sendiri dengan NIK dan Nomor KK, atau hubungi operator desa.' : 'Silakan hubungi operator desa untuk mendapatkan akun Layanan Mandiri.'); ?>
+
                                     <br /><br /><br />IP Address: <?php echo e(request()->ip()); ?>
 
                                     <?php if($cek_anjungan): ?>
@@ -89,7 +91,10 @@
                             ?>
 
                             <?php if($errors->any()): ?>
-                                <div <?php if(!str_contains($errors->first('email'), 'Terlalu banyak upaya masuk.')): ?> id="notif" <?php endif; ?> class="alert alert-danger">
+                                
+                                <div <?php if(!str_contains($errors->first('email'), 'Terlalu banyak upaya masuk.')): ?> id="notif" <?php endif; ?> class="alert alert-danger alert-dismissible">
+                                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+                                    <h4><i class="icon fa fa-ban"></i> Gagal</h4>
                                     <?php $__currentLoopData = $errors->all(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $item): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                         <?php if(str_contains($item, 'Terlalu banyak upaya masuk.')): ?>
                                             <p id="countdown"><?php echo e($item); ?></p>

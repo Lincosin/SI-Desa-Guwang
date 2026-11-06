@@ -98,7 +98,7 @@
     <?php endif; ?>
 
     <?php if($surat->verifikasi_operator == '-1'): ?>
-        <div class="box box-info">
+        <div class="box box-danger">
             <div class="box-header with-border">
                 <h3 class="box-title">Alasan Ditolak</h3>
             </div>
@@ -166,9 +166,24 @@
             </div>
         </div>
         <div class="box-footer text-center">
-            <?php echo $__env->make('admin.layouts.components.tombol_kembali', ['url' => ci_route('keluar.masuk'), 'label' => 'Daftar Permohonan', 'id' => 'back'], \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+            
+            <?php if($surat->verifikasi_operator == -1 && ($operator || $kadus)): ?>
+                <div class="callout callout-warning text-left">
+                    <p>Surat ini ditolak. Pilih salah satu:</p>
+                    <ul>
+                        <li><b>Kirim Ulang</b>: kirim surat yang sama ke <?php echo e($next ?: 'tahap berikutnya'); ?> tanpa perubahan.</li>
+                        <?php if($mandiri): ?>
+                            <li><b>Perbaiki Isi Surat</b>: buka lagi permohonan warga lalu buat ulang suratnya.</li>
+                            <li><b>Kembalikan ke Warga</b>: warga melengkapi atau memperbaiki permohonannya sendiri.</li>
+                        <?php endif; ?>
+                    </ul>
+                </div>
+            <?php endif; ?>
 
-            <?php if(is_file($surat->filesurat . '.pdf')): ?>
+            <?php echo $__env->make('admin.layouts.components.tombol_kembali', ['url' => $kembali, 'label' => $label_kembali, 'id' => 'back'], \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+
+            
+            <?php if(is_file($surat->filesurat . '.pdf') || ($surat->status && $surat->isi_surat && $surat->nama_surat)): ?>
                 <button type="button" class="btn btn-social btn-primary btn-sm preview"><i class="fa fa-file-pdf-o"></i>Lihat PDF</button>
             <?php elseif(is_file($surat->filesurat . '.rtf')): ?>
                 <a href="<?php echo e(ci_route('keluar.unduh.rtf', $surat->id)); ?>" class="btn bg-purple btn-sm" title="Unduh Surat RTF" target="_blank"><i class="fa fa-file-word-o"></i> Unduh File</a>
@@ -176,12 +191,13 @@
 
             <button type="button" class="btn btn-social btn-success btn-sm verifikasi" data-ulang="<?php echo e($surat->verifikasi_operator == -1 ? 'true' : 'false'); ?>"><i class="fa fa-check-circle"></i><?php echo e($surat->verifikasi_operator == -1 ? 'Kirim Ulang' : 'Setujui'); ?></button>
 
-            <?php if(!$operator): ?>
+            <?php if(!$operator && $surat->verifikasi_operator != -1): ?>
                 <button type="button" class="btn btn-social btn-danger btn-sm ditolak"><i class="fa fa-times"></i>Tolak</button>
             <?php endif; ?>
 
-            <?php if($surat->verifikasi_operator == -1 && $operator && $mandiri): ?>
-                <button type="button" class="btn btn-social btn-danger btn-sm kembalikan"><i class="fa fa-times"></i>Kembalikan</button>
+            <?php if($surat->verifikasi_operator == -1 && ($operator || $kadus) && $mandiri): ?>
+                <button type="button" class="btn btn-social btn-warning btn-sm perbaiki-isi" data-url="<?php echo e(ci_route('permohonan_surat_admin.periksa', $mandiri->id)); ?>"><i class="fa fa-pencil"></i>Perbaiki Isi Surat</button>
+                <button type="button" class="btn btn-social btn-danger btn-sm kembalikan"><i class="fa fa-undo"></i>Kembalikan ke Warga</button>
             <?php endif; ?>
         </div>
     </div>
@@ -200,9 +216,10 @@
                 var ulang = $(this).data('ulang')
                 var pesan = `Apakah setuju surat ini di teruskan ke ${next}?`
                 if (next != '' && ulang) {
-                    pesan = `Kirim ulang surat ini untuk diperiksa?`
+                    pesan = `Kirim ulang surat ini ke ${next}?` // KUSTOM: dulu "untuk diperiksa?"
                 } else if (next == '' && tte == '0') {
-                    pesan = `Apakah setuju surat ini di teruskan ke Arsip?`
+                    // KUSTOM: surat permohonan warga langsung siap diunduh warga setelah disetujui
+                    pesan = <?php echo e($mandiri ? 'true' : 'false'); ?> ? `Setujui surat ini? Setelah disetujui, warga dapat melihat dan mengunduh suratnya.` : `Apakah setuju surat ini di teruskan ke Arsip?`
                 } else if (next == '' && tte == '1') {
                     pesan = 'Apakah setuju surat ini untuk ditandatangani secara elektronik?'
                 }
@@ -212,7 +229,7 @@
                 }
 
                 var redirect = {
-                    'confirm': `<?php echo e(ci_route('keluar.masuk')); ?>`,
+                    'confirm': `<?php echo e($kembali); ?>`, // KUSTOM: dulu keluar.masuk
                 }
                 var data = {
                     id: id
@@ -224,7 +241,7 @@
                 e.preventDefault();
                 var id = $('#idsurat').val();
                 var ulr_ajax = `<?php echo e(ci_route('keluar.tolak')); ?>`;
-                var redirect = `<?php echo e(ci_route('keluar.masuk')); ?>`;
+                var redirect = `<?php echo e($kembali); ?>`; // KUSTOM: dulu keluar.masuk
                 ditolak(id, ulr_ajax, redirect, 'Konfirmasi Pengembalian Surat', 'Pesan singkat alasan pengembalian', 'Pesan singkat alasan permohonan surat dikembalikan');
             });
 
@@ -233,8 +250,45 @@
                 console.log(e)
                 var id = $('#idsurat').val();
                 var ulr_ajax = `<?php echo e(ci_route('keluar.kembalikan')); ?>`;
-                var redirect = `<?php echo e(ci_route('keluar.masuk')); ?>`;
+                var redirect = `<?php echo e($kembali); ?>`; // KUSTOM: dulu keluar.masuk
                 ditolak(id, ulr_ajax, redirect, 'Konfirmasi Pengembalian Permohonan', 'Pesan singkat alasan permohonan surat dikembalikan', 'Pesan singkat alasan permohonan surat dikembalikan');
+            });
+
+            // KUSTOM: surat ditolak diperbaiki dari data permohonan -> permohonan kembali ke Sedang Diperiksa,
+            // surat yang ditolak dihapus, lalu langsung dibuka halaman pemeriksaan permohonan
+            $('button.perbaiki-isi').click(function(e) {
+                e.preventDefault();
+                var tujuan = $(this).data('url');
+                Swal.fire({
+                    title: 'Perbaiki isi surat?',
+                    text: 'Surat yang ditolak akan dihapus, lalu Anda membuat ulang suratnya dari data permohonan warga.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, perbaiki',
+                    cancelButtonText: 'Tutup',
+                    showLoaderOnConfirm: true,
+                    preConfirm: () => $.ajax({
+                        url: `<?php echo e(ci_route('keluar.kembalikan')); ?>`,
+                        type: 'POST',
+                        dataType: 'json',
+                        data: {
+                            id: $('#idsurat').val(),
+                            tujuan: 'periksa'
+                        }
+                    }).fail((error) => Swal.showValidationMessage(`Gagal: ${error.statusText}`)),
+                }).then((result) => {
+                    if (!result.isConfirmed) {
+                        return;
+                    }
+                    if (result.value && result.value.status == true) {
+                        window.location.replace(tujuan);
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            text: (result.value && result.value.message) || 'Surat gagal dibuka untuk diperbaiki.'
+                        });
+                    }
+                });
             });
 
             $('button.preview').click(function(e) {

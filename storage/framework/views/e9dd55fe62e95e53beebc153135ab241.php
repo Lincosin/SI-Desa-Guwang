@@ -7,12 +7,14 @@
     </div>
 <?php endif; ?>
 <div class="row">
+    
+    <?php if($operator): ?>
     <div class="col-lg-3 col-sm-6 col-xs-12 widget-surat">
         <a href="<?php echo e(ci_route('keluar/masuk')); ?>">
             <div class="info-box bg-aqua <?php echo e($tab_ini == 11 ? 'active' : ''); ?>">
                 <span class="info-box-icon"><i class="fa fa-envelope-o fa-nav"></i></span>
                 <div class="info-box-content">
-                    <span class="info-box-text">Permohonan</span>
+                    <span class="info-box-text">Menunggu Persetujuan</span>
                     <span class="info-box-number"><?php echo e($widgets['suratMasuk']); ?></span>
                     <div class="progress">
                         <div class="progress-bar" style="width: 100%"></div>
@@ -22,6 +24,7 @@
             </div>
         </a>
     </div>
+    <?php endif; ?>
 
     <div class="col-lg-3 col-sm-6 col-xs-12 widget-surat">
         <a href="<?php echo e(ci_route('keluar')); ?>">

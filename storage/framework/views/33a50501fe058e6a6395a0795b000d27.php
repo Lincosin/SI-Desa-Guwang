@@ -1,5 +1,5 @@
 <?php $__env->startSection('content'); ?>
-    <form id="validasi" action="<?php echo e($form_action); ?>" method="POST">
+    <form id="validasi" action="<?php echo e($form_action); ?>" method="POST" enctype="multipart/form-data">
         <div class="box box-solid">
             <div class="box-header with-border bg-green">
                 <h4 class="box-title">Surat</h4>
@@ -9,7 +9,16 @@
                 <input type="hidden" id="id_permohonan" name="id_permohonan" value="<?php echo e($permohonan['id']); ?>" />
             </div>
             <div class="box-body box-line">
-                <?php if($permohonan): ?>
+                <?php if($ajukan_ulang): ?>
+                    
+                    <div class="alert alert-info" role="alert">
+                        <span style="font-size: larger;"><i class="fa fa-refresh"></i> Ajukan ulang surat <?php echo e($ajukan_ulang['surat']['nama'] ?? ''); ?></span>
+                        <p style="margin-top: 5px;">Isian diambil dari permohonan yang dibatalkan. Periksa dan perbaiki bila perlu, lalu tekan <b>Isi Form</b>.</p>
+                        <?php if(! empty($ajukan_ulang['alasan'])): ?>
+                            <p><b>Alasan dibatalkan:</b> <?php echo e($ajukan_ulang['alasan']); ?></p>
+                        <?php endif; ?>
+                    </div>
+                <?php elseif($permohonan): ?>
                     <div class="alert alert-warning" role="alert">
                         <span style="font-size: larger;">Lengkapi permohonan surat tanggal <?php echo e($permohonan['updated_at']); ?></span>
                     </div>
@@ -67,6 +76,11 @@
                             </thead>
                         </table>
                     </div>
+                    
+                    <p class="text-muted small" style="margin-top: 8px;">
+                        <i class="fa fa-info-circle"></i> Pilih dokumen yang sudah ada, atau tekan <b>Unggah File</b> (JPG, PNG, PDF, maks. <?php echo e(max_upload(true)); ?>).
+                        File yang diunggah otomatis tersimpan di menu Dokumen setelah permohonan dikirim.
+                    </p>
                 </div>
             </div>
             <div class="box-footer">
@@ -107,6 +121,42 @@
                 $(elem).next('.perhatian').hide();
             }
         }
+
+        // KUSTOM unggah syarat: syarat cukup dipenuhi salah satu, pilih dokumen yang ada atau unggah file
+        $(document).on('change', '.syarat-file', function() {
+            var wadah = $(this).closest('.syarat-pilihan');
+            var pilih = wadah.find('select.syarat');
+            var label = wadah.find('.syarat-file-nama');
+            var file = this.files && this.files[0];
+
+            if (file && ['jpg', 'jpeg', 'png', 'pdf'].indexOf(file.name.split('.').pop().toLowerCase()) < 0) {
+                $(this).val('');
+                file = null;
+                $('#kata_peringatan').text('File harus berupa JPG, PNG atau PDF');
+                $('#dialog').modal('show');
+            }
+
+            if (file) {
+                pilih.val('').removeClass('required');
+                label.empty().append('<i class="fa fa-check text-green"></i> ', $('<span>').text(file.name));
+            } else {
+                if (wadah.data('tertunda') != 1) {
+                    pilih.addClass('required');
+                }
+                label.empty();
+            }
+            $('#validasi').validate().element(pilih);
+        });
+
+        $(document).on('change', 'select.syarat', function() {
+            if ($(this).val()) {
+                var wadah = $(this).closest('.syarat-pilihan');
+                wadah.data('tertunda', 0);
+                wadah.find('.syarat-file').val('');
+                wadah.find('.syarat-file-nama').empty();
+                $(this).addClass('required');
+            }
+        });
 
         $(function() {
             $(document).on("keydown", ":input:not(textarea):not(:submit)", function(event) {

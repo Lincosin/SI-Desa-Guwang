@@ -1,0 +1,2 @@
+<a href="<?php echo e($url); ?>" class="btn btn-block btn-social bg-aqua"><i class="fa fa-arrow-circle-left"></i> Kembali Ke <?php echo e($label); ?></a>
+<?php /**PATH C:\xampp\htdocs\opensid\resources\views/admin/layouts/components/tombol_kembali_layanan_mandiri.blade.php ENDPATH**/ ?>

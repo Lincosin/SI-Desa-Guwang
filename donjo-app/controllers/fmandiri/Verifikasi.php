@@ -257,7 +257,18 @@ class Verifikasi extends Mandiri_Controller
 
                     redirect('layanan-mandiri/verifikasi/email/#langkah-3');
 
-                } catch (Exception $e) {
+                } catch (Throwable $e) {
+                    // KUSTOM: sebelumnya catch kosong sehingga gagal kirim email menghasilkan halaman putih
+                    log_message('error', 'Gagal kirim OTP email: ' . $e->getMessage());
+
+                    $this->session->set_flashdata('notif_verifikasi', [
+                        'status' => -1,
+                        'pesan'  => 'Email OTP gagal dikirim. Periksa pengaturan SMTP email desa atau hubungi operator.',
+                    ]);
+
+                    DB::rollback();
+
+                    redirect('layanan-mandiri/verifikasi/email/#langkah-2');
                 }
 
             } catch (Exception $e) {

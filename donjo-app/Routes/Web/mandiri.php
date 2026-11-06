@@ -102,6 +102,8 @@ Route::group('layanan-mandiri', ['namespace' => 'fmandiri'], static function ():
         Route::post('/form/{id?}', 'Surat@form')->name('layanan-mandiri.surat.form');
         Route::post('/kirim/{id?}', 'Surat@kirim')->name('layanan-mandiri.surat.kirim');
         Route::get('/proses/{id?}', 'Surat@proses')->name('layanan-mandiri.surat.proses');
+        Route::post('/selesai/{id}', 'Surat@selesai')->name('layanan-mandiri.surat.selesai'); // KUSTOM: warga menandai surat selesai
+        Route::post('/hapus-dibatalkan/{id?}', 'Surat@hapus_dibatalkan')->name('layanan-mandiri.surat.hapus-dibatalkan'); // KUSTOM: warga menghapus riwayat permohonan dibatalkan
         Route::get('/cetak_no_antrian/{no_antrian}', 'Surat@cetak_no_antrian')->name('layanan-mandiri.surat.cetak_no_antrian');
         Route::get('cetak/{id}', 'Surat@cetak')->name('layanan-mandiri.surat.cetak');
     });

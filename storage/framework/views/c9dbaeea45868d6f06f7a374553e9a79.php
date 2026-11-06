@@ -1,5 +1,5 @@
 <?php
-    $themeVersion = 'v2.2.1';
+    $themeVersion = 'v2.3.6';
     $smd_warna = theme_config('warna_utama', '#1d64d8') ?: '#1d64d8';
     $smd_animasi = theme_config('animasi', '1') == '1';
     // Kelas body: banner foto di beranda (navbar bening) & tata letak landing

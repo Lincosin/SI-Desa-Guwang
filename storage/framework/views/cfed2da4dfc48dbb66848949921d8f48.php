@@ -1,5 +1,6 @@
 <?php $__env->startSection('content'); ?>
-    <?php echo $__env->make('admin.layouts.components.notifikasi', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+    
+    <?php echo $__env->make('admin.layouts.components.notifikasi', ['errors' => new \Illuminate\Support\ViewErrorBag()], \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
     
     <form id="validasi" autocomplete="off" action="<?php echo e($form_action); ?>" method="post" class="login-form">
         <div class="form-group form-login">
@@ -8,18 +9,19 @@
         
         <input type="hidden" name="anjungan_uuid" id="anjungan_uuid">
         <div class="form-group form-login">
+            
             <input
                 type="password"
                 autocomplete="off"
-                class="form-control angka required <?php echo jecho($cek_anjungan['keyboard'] == 1, true, 'kbvnumber'); ?>"
+                class="form-control required <?php echo jecho($cek_anjungan['keyboard'] == 1, true, 'kbvtext'); ?>"
                 name="password"
-                placeholder="PIN"
+                placeholder="Password"
                 id="pin"
-                maxlength="6"
+                maxlength="50"
             >
         </div>
         <div class="form-group">
-            <center><input type="checkbox" id="checkbox" style="display: initial;"> <label for="checkbox">Tampilkan PIN</label></center>
+            <center><input type="checkbox" id="checkbox" style="display: initial;"> <label for="checkbox">Tampilkan Password</label></center>
         </div>
         <div class="form-group">
             <button type="submit" class="btn btn-block bg-green"><b>MASUK</b></button>
@@ -29,18 +31,20 @@
                 <button type="button" class="btn btn-block bg-green"><b>MASUK DENGAN E-KTP</b></button>
             </a>
         </div>
+        <div class="form-group">
+            <a href="<?php echo e(site_url('layanan-mandiri/lupa-pin')); ?>">
+                <button type="button" class="btn btn-block bg-green"><b>LUPA PASSWORD</b></button>
+            </a>
+        </div>
+        
         <?php if(setting('tampilkan_pendaftaran')): ?>
-            <div class="form-group">
+            <div class="form-group smd-daftar">
+                <span class="smd-daftar__teks">Belum punya akun?</span>
                 <a href="<?php echo e(site_url('layanan-mandiri/daftar')); ?>">
-                    <button type="button" class="btn btn-block bg-green"><b>DAFTAR</b></button>
+                    <button type="button" class="btn btn-block bg-green smd-daftar__tombol"><b>DAFTAR AKUN BARU</b></button>
                 </a>
             </div>
         <?php endif; ?>
-        <div class="form-group">
-            <a href="<?php echo e(site_url('layanan-mandiri/lupa-pin')); ?>">
-                <button type="button" class="btn btn-block bg-green"><b>LUPA PIN</b></button>
-            </a>
-        </div>
         <?php if(in_array(\Modules\Anjungan\Models\Anjungan::ANJUNGAN, $cek_anjungan['tipe'] ?? [])): ?>
             <div class="form-group">
                 <a href="<?= route('anjungan.index') ?>">
